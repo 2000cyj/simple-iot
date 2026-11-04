@@ -221,7 +221,7 @@ pnpm dev
 
 Web ready at `http://localhost:5173`. Vite proxies `/iot` → `http://localhost:5010` automatically.
 
-> See [`AGENTS.md`](AGENTS.md) for the full coding conventions used by this project (component patterns, design tokens, naming rules).
+> Coding conventions live in [`CONTRIBUTING.md`](CONTRIBUTING.md); frontend component patterns and design tokens live in [`iot-web/STYLE_GUIDE.md`](iot-web/STYLE_GUIDE.md).
 
 ---
 

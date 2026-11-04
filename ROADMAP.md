@@ -44,17 +44,17 @@ This roadmap is the honest list of what is **missing**, **rough**, or **deserves
 | P2-5 | **LwM2M** driver | mobile / NB-IoT modules |
 | P2-6 | Driver SDK + Maven archetype `simple-iot-driver-archetype` | so contributors can publish drivers without forking |
 
-## P3 — frontend / UI overhaul (tracked separately in `UI-DESIGN.md`)
+## P3 — frontend / UI polish
 
-The current Web UI works, but visually it is closer to "internal admin tool" than to "modern IoT platform". A redesign is being scoped:
+The core UI overhaul landed in v0.3.0. Remaining polish items:
 
-- New design tokens (typography scale, semantic colors, spacing rhythm) with a clean product-console style.
-- Component audit (forms, tables, dialogs, empty states, dark mode parity).
-- Real telemetry-oriented dashboard widgets (sparkline cards, status grids, alarm timeline).
-- Onboarding flow (first-run wizard, sample device + sample rule chain).
-- Accessibility pass (focus rings, keyboard nav, ARIA on table actions).
+- ✅ New design tokens (typography scale, semantic colors, spacing rhythm) with a clean product-console style.
+- ✅ Component audit (forms, tables, dialogs, empty states, dark mode parity).
+- ✅ Real telemetry-oriented dashboard widgets (sparkline cards, status grids, alarm timeline).
+- ⬜ Onboarding flow (first-run wizard, sample device + sample rule chain).
+- ⬜ Accessibility pass (focus rings, keyboard nav, ARIA on table actions).
 
-→ Detailed proposal lives in [`UI-DESIGN.md`](./UI-DESIGN.md).
+→ Outstanding findings are tracked in [`iot-web/design-audit.md`](./iot-web/design-audit.md).
 
 ## P4 — DX / community
 

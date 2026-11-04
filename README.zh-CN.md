@@ -214,7 +214,7 @@ pnpm dev
 
 前端就绪 `http://localhost:5173`，Vite 自动代理 `/iot` → `http://localhost:5010`。
 
-> 完整代码规范、组件模式、设计 Token、命名约定见 [`AGENTS.md`](AGENTS.md)。
+> 代码规范见 [`CONTRIBUTING.md`](CONTRIBUTING.md)，前端组件模式与设计 Token 见 [`iot-web/STYLE_GUIDE.md`](iot-web/STYLE_GUIDE.md)。
 
 ---
 

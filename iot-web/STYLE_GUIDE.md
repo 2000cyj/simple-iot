@@ -2,7 +2,7 @@
 
 ## 🎯 总体原则
 
-基于 **Antfu ESLint Config** + **UnoCSS** + **dwyl-ui** 的现代化前端开发规范。
+基于 **Antfu ESLint Config** + **UnoCSS** + **Element Plus** 的现代化前端开发规范。
 
 ## 📝 Vue 组件规范
 
@@ -187,34 +187,47 @@ function handleUpdate(data) {
 }
 ```
 
-## 📦 dwyl-ui 组件使用
+## 📦 表格与表单规范
+
+项目统一使用自研 `IotTable` 组件配合 `useTable` / `useForm` composable（dwyl-ui 已移除，不再是依赖）。
 
 ```vue
-<template>
-  <!-- 使用 dwyl-ui 封装的组件 -->
-  <DwTable
-    ref="tableRef"
-    :column="columns"
-    :params="params"
-    :api="apiFunction"
-    row-key="id"
-  />
+<script setup>
+import { useTable } from '@/composables/useTable'
+import IotTable from '@/components/IotTable.vue'
 
-  <dw-select
-    v-model="selectedValue"
-    placeholder="请选择"
-    filterable
-    clearable
-  >
-    <dw-option
-      v-for="item in options"
-      :key="item.value"
-      :label="item.label"
-      :value="item.value"
-    />
-  </dw-select>
+const { tableData, total, loading, params, onSearch, onReset } = useTable({
+  fetchApi: devicePageApi,
+  deleteApi: deviceDeleteApi,
+})
+</script>
+
+<template>
+  <IotTable
+    :columns="column"
+    :data="tableData"
+    :total="total"
+    :current-page="params.page"
+    :page-size="params.size"
+    :loading="loading"
+    @page-change="onPageChange"
+    @size-change="onSizeChange"
+  />
 </template>
 ```
+
+列配置为数组，每项描述一列：
+
+```javascript
+const column = [
+  { prop: 'severity', label: '级别', width: 100, align: 'center', slot: 'severity' },
+  { prop: 'alarmName', label: '告警名称', minWidth: 180 },
+]
+```
+
+- `prop` / `label` 必填，其余可选 `width`、`minWidth`、`align`、`slot`
+- 需要自定义渲染时用 `slot` 指定插槽名，在 `IotTable` 内以具名插槽实现
+- `column`（单数）与 `api`（旧风格）属遗留兼容写法，新增页面统一用 `columns` + `data`
 
 ## 🔧 代码组织
 
@@ -240,7 +253,6 @@ src/
 ### 2. 导入顺序
 
 ```javascript
-import { dwHooks } from 'dwyl-ui'
 // 2. 第三方库
 import { ElMessage } from 'element-plus'
 

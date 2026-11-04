@@ -20,7 +20,7 @@ First off — **thank you** for considering a contribution. Every bug report, ty
 
 ### Development setup
 
-See the [**Quick Start**](README.md#-quick-start-60-seconds-with-docker) and [**Development**](README.md#-development) sections in the README. Coding conventions, component patterns and design tokens live in [`AGENTS.md`](AGENTS.md) — please read it before opening a frontend PR.
+See the [**Quick Start**](README.md#-quick-start-60-seconds-with-docker) and [**Development**](README.md#-development) sections in the README. Backend conventions live in this file; frontend component patterns and design tokens live in [`iot-web/STYLE_GUIDE.md`](iot-web/STYLE_GUIDE.md) — please read it before opening a frontend PR.
 
 ### Workflow
 
@@ -56,7 +56,7 @@ docs(readme): translate quick start to Spanish
 - **Java** - standard Spring Boot conventions, Lombok allowed. Run `JAVA_HOME=/path/to/jdk-25 ./mvnw test` before pushing.
 - **Vue / JS** - Composition API + `<script setup>`. Run `cd iot-web && pnpm lint && pnpm build` before pushing.
 - **CSS** - use design tokens from `iot-web/src/styles/var.scss` and `global.scss`. No hard-coded colors.
-- **Tests** - 190 unit tests. Add tests for new rule nodes, services, and non-trivial logic.
+- **Tests** - 45 test files, 167 test cases. Add tests for new rule nodes, services, and non-trivial logic.
 
 ### Writing a protocol driver
 
@@ -104,7 +104,7 @@ By contributing, you agree that your contributions will be licensed under the [A
 
 ### 本地开发
 
-参考 README 的 [**快速开始**](README.zh-CN.md#-快速开始docker60-秒) 与 [**本地开发**](README.zh-CN.md#-本地开发)。代码规范、组件模式、设计 Token 见 [`AGENTS.md`](AGENTS.md)，做前端改动前请先读一遍。
+参考 README 的 [**快速开始**](README.zh-CN.md#-快速开始docker60-秒) 与 [**本地开发**](README.zh-CN.md#-本地开发)。后端代码规范见本文件，前端组件模式与设计 Token 见 [`iot-web/STYLE_GUIDE.md`](iot-web/STYLE_GUIDE.md)，做前端改动前请先读一遍。
 
 ### 工作流
 
@@ -137,8 +137,8 @@ docs(readme): 补充西班牙语快速开始
 
 ### 代码风格
 
-- **Java** — 标准 Spring Boot 规范，可用 Lombok，Sonar 默认规则。提交前先 `mvn package` 通过。
-- **Vue / JS** — Composition API + `<script setup>`，遵循 `iot-web/.eslintrc.*`。提交前 `pnpm lint`。
+- **Java** — 标准 Spring Boot 规范，可用 Lombok。提交前先 `./mvnw test` 通过。
+- **Vue / JS** — Composition API + `<script setup>`，遵循 `iot-web/eslint.config.js`（flat config）。提交前 `pnpm lint`。
 - **CSS** — 用 `iot-web/src/styles/var.scss` / `global.scss` 里的设计 Token，禁止硬编码颜色。
 
 ### 编写协议驱动
