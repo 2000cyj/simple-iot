@@ -37,6 +37,7 @@ The project keeps the runtime intentionally compact: one Spring Boot application
 | **Modbus TCP** | Per-device polling, register mapping, multi-function-code read, scale + data-type conversion. Demo `modbus-sim` included. |
 | **System monitoring** | Real CPU / memory / disk metrics on dashboard (replaces placeholder zeros). |
 | **UI audit** | 8 pages unified to PageHeader + glass-card + el-empty empty states, -40 lines duplicate CSS. |
+| **Platform maturity** | Raised from 75% to 80% across 12 capability domains. |
 
 ### v0.2.0 - Real-time + Operations (2026-07-23)
 
@@ -229,11 +230,12 @@ Web ready at `http://localhost:5173`. Vite proxies `/iot` → `http://localhost:
 
 - [x] **v0.1** — Stable single-node release, bilingual docs, CI, public demo
 - [x] **v0.2** — `zh-CN` / `en-US` UI, rule-chain editor polish, demo deploy hardening
-- [ ] **v0.3** — thing-model import/export, device groups
-- [ ] **v0.4** — Custom data dashboards (drag-and-drop widgets)
-- [ ] **v0.5** — OTA upgrade flow, edge gateway packaging
-- [ ] **v0.6** — Plugin system (protocol packs as standalone JARs)
-- [ ] **v1.0** — Production hardening, performance benchmarks, helm chart
+- [x] **v0.3** — Drivers + Ingress: Modbus TCP driver, signed webhook ingress
+- [ ] **v0.4** — Thing-model import/export, edge gateway packaging
+- [ ] **v0.5** — Plugin system (protocol packs as standalone JARs)
+- [ ] **v1.0** — Production hardening, performance benchmarks
+
+Full capability-by-capability status is tracked in [`ROADMAP.md`](ROADMAP.md).
 
 Open an issue or [Discussion](https://github.com/dingdaoyi/simple-iot/discussions) if there's a feature you want to see prioritised.
 

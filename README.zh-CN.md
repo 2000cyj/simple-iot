@@ -36,6 +36,7 @@
 | **Modbus TCP** | 按设备定时轮询，寄存器映射配置，多功能码读取，缩放 + 数据类型转换。含 `modbus-sim` 模拟器 |
 | **系统监控** | 仪表盘展示真实 CPU / 内存 / 磁盘使用率（替换原来的占位 0%） |
 | **UI 审计** | 8 个页面统一到 PageHeader + glass-card + el-empty 空状态，删除 40 行重复 CSS |
+| **平台成熟度** | 12 个能力域评估，成熟度由 75% 提升至 80% |
 
 ### v0.2.0 - 实时化 + 运维增强（2026-07-23）
 
@@ -222,11 +223,12 @@ pnpm dev
 
 - [x] **v0.1** — 单节点稳定版、双语文档、CI、在线演示
 - [x] **v0.2** — `zh-CN` / `en-US` 双语界面、规则链编辑器优化、演示部署加固
-- [ ] **v0.3** — 物模型导入导出、设备分组
-- [ ] **v0.4** — 自定义数据大屏（拖拽组件）
-- [ ] **v0.5** — OTA 升级流程、边缘网关打包
-- [ ] **v0.6** — 插件系统（协议包独立 JAR）
-- [ ] **v1.0** — 生产硬化、性能 Benchmark、Helm Chart
+- [x] **v0.3** — 驱动 + 数据接入：Modbus TCP 驱动、签名 Webhook 接入
+- [ ] **v0.4** — 物模型导入导出、边缘网关打包
+- [ ] **v0.5** — 插件系统（协议包独立 JAR）
+- [ ] **v1.0** — 生产硬化、性能 Benchmark
+
+各能力的详细状态见 [`ROADMAP.md`](ROADMAP.md)。
 
 想要的功能？开 [Issue](https://github.com/dingdaoyi/simple-iot/issues) 或 [Discussion](https://github.com/dingdaoyi/simple-iot/discussions)。
 

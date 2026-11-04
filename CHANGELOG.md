@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **OPC UA driver** (`P2-2`) - Eclipse Milo client with per-device node mapping (scale + data-type conversion), `tb_opcua_config` table, CRUD API and scheduled polling service.
+- **Driver SDK** (`P2-6`) - `DeviceKeyParser` / `ProtocolDecoder` SPI extracted into a standalone module with example implementations and a contributor guide.
+- **Helm chart** (`P4-1`) - `deploy/helm/simple-iot` with Postgres / InfluxDB / RustFS as optional dependencies, configurable resources, replicas, secrets and ingress.
+- **Mobile responsive layout** (`P1-7`) - collapsible sidebar drawer with hamburger toggle, horizontally scrollable tables, single-column forms and centred pagination on narrow screens.
+- **Core module tests** - added `AlarmServiceTest` and `DeviceServiceTest` covering the alarm and device service paths.
+
+### Fixed
+- **Fresh-install schema** - `doc/sql/init.sql` had not been backfilled since 2026-07 and was missing 16 tables, so a new deployment failed on dashboard / OTA / Modbus / webhook / device shadow / audit features. All 16 tables are now included, `tb_device.parentid` is corrected to `parent_id` to match the entity mapping, the unused `tb_iot_rule` table and the dead `tb_model_service.status` column are removed, and every DDL statement is now re-runnable.
+- **License declaration** - OpenAPI metadata, docs site footer and the roadmap now declare Apache 2.0 to match the actual `LICENSE`.
+- **`PushLog` primary key** - the entity had no `@TableId` although `tb_push_log` has an `id` primary key.
+
+### Changed
+- **Schema verification** - added two zero-dependency checkers that keep `init.sql` and the entity classes in sync (`scripts/verify_schema.py`, `scripts/verify_sql.py`).
+
 ## [0.3.0] - 2026-07-31
 
 ### Added

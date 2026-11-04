@@ -1,6 +1,6 @@
 # Roadmap
 
-> Last updated: 2026-06-25 · Maintainer: [@dingdaoyi](https://github.com/dingdaoyi)
+> Last updated: 2026-11-04 · Maintainer: [@dingdaoyi](https://github.com/dingdaoyi)
 >
 > Have an idea? Open a [GitHub Discussion](https://github.com/dingdaoyi/simple-iot/discussions) or vote on an item below 👍.
 
@@ -12,7 +12,7 @@ This roadmap is the honest list of what is **missing**, **rough**, or **deserves
 
 | # | Item | Why it matters |
 |---|---|---|
-| P0-1 | ✅ **Test coverage** - 173 tests across 34 test files, 12/12 rule-engine node types covered. | The platform handles real devices - silent regressions are unacceptable. |
+| P0-1 | ✅ **Test coverage** - 167 test cases across 45 test files, 15/15 rule-engine node types covered. | The platform handles real devices - silent regressions are unacceptable. |
 | P0-2 | ✅ **Integration test** harness with Testcontainers (Postgres container + embedded MQTT). Smoke test boots Spring context, verifies tb_user schema and OpenAPI docs endpoint. | Catches Docker / wiring breakage before release. |
 | P0-3 | ✅ **Open API spec** - springdoc-openapi 3.1.0 published at `/v3/api-docs`, Knife4j Swagger UI at `/iot/doc.html`. | API docs are now auto-generated, not hand-written. |
 | P0-4 | ✅ **Auth hardening** - `force_change_pwd` field + forced change-password dialog on login, BCrypt password hashing, password complexity policy (8+ chars, upper+lower+digit). | Default deployments expose admin/123456 - needs a forced change-password on first login. |
@@ -30,7 +30,7 @@ This roadmap is the honest list of what is **missing**, **rough**, or **deserves
 | P1-4 | ✅ **Rule-engine v2** - sub-flows with cycle detection, persistent execution logs, replay from recorded payloads. | Complex flows should be easy to author and debug. |
 | P1-5 | ✅ **Custom dashboards** - drag-and-drop widget canvas (line, gauge, value card, map, table) bound to device telemetry. | Required to call this an "IoT platform" with a straight face. |
 | ~~P1-6~~ | ✅ **OTA firmware** - upload firmware -> push to device groups -> progress tracking. | Most real IoT projects need OTA on day 1. |
-| P1-7 | **Mobile-friendly Web UI** — current admin is desktop-only; need a responsive read-only view for ops on the phone. | Tied to the UI overhaul (see "Frontend" below). |
+| P1-7 | ✅ **Mobile-friendly Web UI** — collapsible sidebar drawer, hamburger toggle, horizontally scrollable tables, single-column forms. | Ops can now check devices and alarms from a phone. |
 | P1-8 | ✅ **i18n foundation** — `zh-CN` / `en-US` UI, language switcher and Element Plus locale sync have landed; continue translating new pages as they are added. | Keeps the console usable for both Chinese and English users. |
 
 ## P2 — protocol / driver expansion
@@ -38,11 +38,11 @@ This roadmap is the honest list of what is **missing**, **rough**, or **deserves
 | # | Item | Notes |
 |---|---|---|
 | P2-1 | **Modbus TCP/RTU** driver ✅ | most-requested industrial protocol |
-| P2-2 | **OPC UA** client driver | factory / SCADA integrations |
+| P2-2 | ✅ **OPC UA** client driver (Eclipse Milo) — per-device node mapping with scale + data-type conversion, polled on a configurable interval. | factory / SCADA integrations |
 | P2-3 | **CoAP** server | low-power devices |
 | P2-4 | **HTTP webhook** ingress with HMAC verification ✅ | third-party platforms push to us |
 | P2-5 | **LwM2M** driver | mobile / NB-IoT modules |
-| P2-6 | Driver SDK + Maven archetype `simple-iot-driver-archetype` | so contributors can publish drivers without forking |
+| P2-6 | ⚠️ **Driver SDK** — `DeviceKeyParser` / `ProtocolDecoder` SPI extracted with example implementations; **not yet wired into the Maven build nor published as a real archetype**. | so contributors can publish drivers without forking |
 
 ## P3 — frontend / UI polish
 
@@ -60,7 +60,7 @@ The core UI overhaul landed in v0.3.0. Remaining polish items:
 
 | # | Item |
 |---|---|
-| P4-1 | Helm chart + Kubernetes manifests |
+| P4-1 | ✅ Helm chart (`deploy/helm/simple-iot`) — Postgres / InfluxDB / RustFS as optional dependencies, configurable resources, replicas, secrets and ingress |
 | P4-2 | One-click cloud deploy buttons (Sealos / Zeabur / Render / Railway) |
 | P4-3 | Demo seed script — fake devices + simulated MQTT publisher |
 | P4-4 | English-language video tour (3–5 min) |
@@ -86,6 +86,10 @@ The core UI overhaul landed in v0.3.0. Remaining polish items:
 - ✅ P0-5: DataRetentionService - daily cron purges old alarms + push logs
 - ✅ P0-6: `deploy.sh backup` / `deploy.sh restore` for Postgres + RustFS
 - ✅ P0-7: Micrometer + Prometheus metrics at `/actuator/prometheus`
+- ✅ P1-7: Mobile responsive layout — sidebar drawer, hamburger toggle, responsive tables and forms
+- ✅ P2-2: OPC UA driver (Eclipse Milo) — node mapping, polling service, config API
+- ✅ P4-1: Helm chart — `deploy/helm/simple-iot` with optional Postgres / InfluxDB / RustFS
+- ⚠️ P2-6: Driver SDK — SPI and examples landed, still needs Maven build wiring and a real archetype
 
 ## Not planned
 
