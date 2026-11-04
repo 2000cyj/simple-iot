@@ -3,6 +3,8 @@ package com.github.dingdaoyi.core.model;
 import lombok.Data;
 
 /**
+ * 设备基础信息
+ *
  * @author dingyunwei
  */
 @Data

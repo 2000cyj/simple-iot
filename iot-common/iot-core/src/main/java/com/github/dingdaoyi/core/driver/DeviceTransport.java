@@ -1,6 +1,8 @@
 package com.github.dingdaoyi.core.driver;
 
 /**
+ * 驱动传输接口
+ *
  * @author dingyunwei
  */
 public interface DeviceTransport {

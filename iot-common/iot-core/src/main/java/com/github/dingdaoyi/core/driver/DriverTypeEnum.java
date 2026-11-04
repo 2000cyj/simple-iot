@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
+ * 驱动类型枚举
+ *
  * @author dingyunwei
  */
 

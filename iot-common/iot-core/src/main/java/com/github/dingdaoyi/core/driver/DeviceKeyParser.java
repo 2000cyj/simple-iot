@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
+ * 设备编号解析接口
+ *
  * @author dingyunwei
  */
 public interface DeviceKeyParser {
