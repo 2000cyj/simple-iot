@@ -25,7 +25,7 @@ public class OpenApiConfig {
                     .name("dingdaoyi")
                     .url("https://github.com/dingdaoyi/simple-iot"))
                 .license(new License()
-                    .name("MIT")
+                    .name("Apache 2.0")
                     .url("https://github.com/dingdaoyi/simple-iot/blob/main/LICENSE")));
     }
 }
