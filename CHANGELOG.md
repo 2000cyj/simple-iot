@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Schema verification** - added two zero-dependency checkers that keep `init.sql` and the entity classes in sync (`scripts/verify_schema.py`, `scripts/verify_sql.py`).
 - **Unified response envelope** - `BaseResult` stored both `code` and `success`, which are always equal but were written independently. `success` is now derived from `code` instead of being a separate field, so the two can no longer drift apart. The serialized JSON is unchanged.
+- **Response code enum renamed** - `ResultCode` is now `ErrorCode` in `iot-core`, matching what it actually holds. The hand-written constructor and two getters are replaced by `@AllArgsConstructor` and `@Getter`; all 17 constants and their codes are unchanged.
 
 ## [0.3.0] - 2026-07-31
 
