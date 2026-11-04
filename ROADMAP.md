@@ -91,7 +91,7 @@ The current Web UI works, but visually it is closer to "internal admin tool" tha
 
 - ❌ Microservice split. Simple IoT's value proposition is "one jar". A multi-service variant is out of scope.
 - ❌ Kafka / Pulsar dependency. We will not require an external message bus.
-- ❌ Commercial / enterprise edition. Single MIT-licensed codebase forever.
+- ❌ Commercial / enterprise edition. Single Apache-2.0-licensed codebase forever.
 
 ---
 
