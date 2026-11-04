@@ -488,7 +488,6 @@ CREATE TABLE "public"."tb_model_service" (
 COMMENT ON COLUMN "public"."tb_model_service"."id" IS 'id';
 COMMENT ON COLUMN "public"."tb_model_service"."async" IS '服务是否为异步';
 COMMENT ON COLUMN "public"."tb_model_service"."event_type" IS '事件类型,INFO,WARN,FAULT';
-COMMENT ON COLUMN "public"."tb_model_service"."status" IS '功能状态,1 启用,0禁用';
 COMMENT ON COLUMN "public"."tb_model_service"."identifier" IS '标识符';
 COMMENT ON COLUMN "public"."tb_model_service"."name" IS '名称';
 COMMENT ON COLUMN "public"."tb_model_service"."remark" IS '备注';
@@ -615,7 +614,6 @@ CREATE TABLE "public"."tb_service_property" (
   "property_id" int4 NOT NULL,
   "param_type" int4 NOT NULL
 );
-;
 COMMENT ON COLUMN "public"."tb_service_property"."service_id" IS '服务id';
 COMMENT ON COLUMN "public"."tb_service_property"."property_id" IS '属性id';
 COMMENT ON COLUMN "public"."tb_service_property"."param_type" IS '1:出参数,2:入参';
