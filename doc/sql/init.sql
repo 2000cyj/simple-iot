@@ -121,17 +121,6 @@ START 1
 CACHE 1;
 
 -- ----------------------------
--- Sequence structure for tb_iot_rule_id_seq
--- ----------------------------
-DROP SEQUENCE IF EXISTS "public"."tb_iot_rule_id_seq";
-CREATE SEQUENCE "public"."tb_iot_rule_id_seq"
-INCREMENT 1
-MINVALUE  1
-MAXVALUE 2147483647
-START 1
-CACHE 1;
-
--- ----------------------------
 -- Sequence structure for tb_model_property_id_seq
 -- ----------------------------
 DROP SEQUENCE IF EXISTS "public"."tb_model_property_id_seq";
@@ -222,7 +211,7 @@ CREATE TABLE "public"."tb_device" (
   "device_secret" varchar(50) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
   "online" bool DEFAULT false,
   "active_status" bool DEFAULT false,
-  "parentid" int4 NOT NULL DEFAULT '-1'::integer,
+  "parent_id" int4 NOT NULL DEFAULT '-1'::integer,
   "create_time" timestamp(6),
   "update_time" timestamp(6),
   "third_device_id" varchar(64) COLLATE "pg_catalog"."default"
@@ -235,7 +224,7 @@ COMMENT ON COLUMN "public"."tb_device"."device_key" IS '设备key';
 COMMENT ON COLUMN "public"."tb_device"."device_secret" IS '设备密钥';
 COMMENT ON COLUMN "public"."tb_device"."online" IS '在线状态:false 离线.true 在线';
 COMMENT ON COLUMN "public"."tb_device"."active_status" IS '激活状态';
-COMMENT ON COLUMN "public"."tb_device"."parentid" IS '父级id';
+COMMENT ON COLUMN "public"."tb_device"."parent_id" IS '父级id(网关-子设备拓扑)';
 COMMENT ON COLUMN "public"."tb_device"."create_time" IS '创建时间';
 COMMENT ON COLUMN "public"."tb_device"."update_time" IS '更新时间';
 COMMENT ON COLUMN "public"."tb_device"."third_device_id" IS '第三方id';
@@ -244,7 +233,7 @@ COMMENT ON COLUMN "public"."tb_device"."third_device_id" IS '第三方id';
 -- Records of tb_device
 -- ----------------------------
 BEGIN;
-INSERT INTO "public"."tb_device" ("id", "product_id", "device_name", "device_key", "device_secret", "online", "active_status", "parentid", "create_time", "update_time", "third_device_id") VALUES (1, 1, '压力探测器', '12312321312', 'v3mqITcQpms4SAerMmka', 't', 't', -1, NULL, NULL, NULL);
+INSERT INTO "public"."tb_device" ("id", "product_id", "device_name", "device_key", "device_secret", "online", "active_status", "parent_id", "create_time", "update_time", "third_device_id") VALUES (1, 1, '压力探测器', '12312321312', 'v3mqITcQpms4SAerMmka', 't', 't', -1, NULL, NULL, NULL);
 COMMIT;
 
 -- ----------------------------
@@ -391,43 +380,6 @@ INSERT INTO "public"."tb_iot_driver" ("driver_id", "name", "type", "description"
 COMMIT;
 
 -- ----------------------------
--- Table structure for tb_iot_rule
--- ----------------------------
-DROP TABLE IF EXISTS "public"."tb_iot_rule";
-CREATE TABLE "public"."tb_iot_rule" (
-  "id" int4 NOT NULL DEFAULT nextval('tb_iot_rule_id_seq'::regclass),
-  "name" varchar(50) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "rule_type" int4 NOT NULL DEFAULT '-1'::integer,
-  "script" varchar(50) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "remark" varchar(50) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
-  "input_type" int4 NOT NULL DEFAULT '-1'::integer,
-  "source_type" int4 NOT NULL DEFAULT '-1'::integer,
-  "source_id" int4 NOT NULL DEFAULT '-1'::integer,
-  "target_type" int4 NOT NULL DEFAULT '-1'::integer,
-  "target_id" int4 NOT NULL DEFAULT '-1'::integer,
-  "identifier" varchar(50) COLLATE "pg_catalog"."default" DEFAULT ''::character varying
-)
-;
-COMMENT ON COLUMN "public"."tb_iot_rule"."id" IS '规则id';
-COMMENT ON COLUMN "public"."tb_iot_rule"."name" IS '规则名称';
-COMMENT ON COLUMN "public"."tb_iot_rule"."rule_type" IS '处理类型';
-COMMENT ON COLUMN "public"."tb_iot_rule"."script" IS '处理脚本';
-COMMENT ON COLUMN "public"."tb_iot_rule"."remark" IS '备注';
-COMMENT ON COLUMN "public"."tb_iot_rule"."input_type" IS '输入类型';
-COMMENT ON COLUMN "public"."tb_iot_rule"."source_type" IS '源数据类型,1,产品;2,设备分组,3, 特定设备';
-COMMENT ON COLUMN "public"."tb_iot_rule"."source_id" IS '数据源id';
-COMMENT ON COLUMN "public"."tb_iot_rule"."target_type" IS '目标类型, 1: http, 2,mqtt; 3,message';
-COMMENT ON COLUMN "public"."tb_iot_rule"."target_id" IS '目标id';
-COMMENT ON COLUMN "public"."tb_iot_rule"."identifier" IS '标识符';
-
--- ----------------------------
--- Records of tb_iot_rule
--- ----------------------------
-BEGIN;
-INSERT INTO "public"."tb_iot_rule" ("id", "name", "rule_type", "script", "remark", "input_type", "source_type", "source_id", "target_type", "target_id", "identifier") VALUES (3, '压力过高推送模板', 1, '#value>3', '测试', 1, 3, 1, 3, 1, 'pressure');
-COMMIT;
-
--- ----------------------------
 -- Table structure for tb_message_receive
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."tb_message_receive";
@@ -522,7 +474,6 @@ CREATE TABLE "public"."tb_model_service" (
   "id" int4 NOT NULL DEFAULT nextval('tb_model_service_id_seq'::regclass),
   "async" bool,
   "event_type" int4,
-  "status" int4 DEFAULT 0,
   "service_type" int4,
   "identifier" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
   "name" varchar(255) COLLATE "pg_catalog"."default",
@@ -552,11 +503,11 @@ COMMENT ON TABLE "public"."tb_model_service" IS '物模型服务表';
 -- Records of tb_model_service
 -- ----------------------------
 BEGIN;
-INSERT INTO "public"."tb_model_service" ("id", "async", "event_type", "status", "service_type", "identifier", "name", "remark", "product_type_id", "icon_id", "custom", "required", "product_id") VALUES (1, 't', 1, 1, 2, 'heartbeat', '心跳', '心跳', 1, NULL, 'f', 't', NULL);
-INSERT INTO "public"."tb_model_service" ("id", "async", "event_type", "status", "service_type", "identifier", "name", "remark", "product_type_id", "icon_id", "custom", "required", "product_id") VALUES (3, 't', 1, 0, 2, 'alarm', '告警', '测试告警', 1, NULL, 'f', 'f', NULL);
-INSERT INTO "public"."tb_model_service" ("id", "async", "event_type", "status", "service_type", "identifier", "name", "remark", "product_type_id", "icon_id", "custom", "required", "product_id") VALUES (4, NULL, NULL, 0, 2, 'fault', '故障', '测试', 1, NULL, 'f', 'f', NULL);
-INSERT INTO "public"."tb_model_service" ("id", "async", "event_type", "status", "service_type", "identifier", "name", "remark", "product_type_id", "icon_id", "custom", "required", "product_id") VALUES (2, 't', 1, 0, 1, 'canmand', '指令下发', '指令下发', 1, NULL, 'f', 'f', NULL);
-INSERT INTO "public"."tb_model_service" ("id", "async", "event_type", "status", "service_type", "identifier", "name", "remark", "product_type_id", "icon_id", "custom", "required", "product_id") VALUES (10, 'f', NULL, 0, 1, 'customservice', '自定义服务', '测试', 1, NULL, 't', 'f', 1);
+INSERT INTO "public"."tb_model_service" ("id", "async", "event_type", "service_type", "identifier", "name", "remark", "product_type_id", "icon_id", "custom", "required", "product_id") VALUES (1, 't', 1, 2, 'heartbeat', '心跳', '心跳', 1, NULL, 'f', 't', NULL);
+INSERT INTO "public"."tb_model_service" ("id", "async", "event_type", "service_type", "identifier", "name", "remark", "product_type_id", "icon_id", "custom", "required", "product_id") VALUES (3, 't', 1, 2, 'alarm', '告警', '测试告警', 1, NULL, 'f', 'f', NULL);
+INSERT INTO "public"."tb_model_service" ("id", "async", "event_type", "service_type", "identifier", "name", "remark", "product_type_id", "icon_id", "custom", "required", "product_id") VALUES (4, NULL, NULL, 2, 'fault', '故障', '测试', 1, NULL, 'f', 'f', NULL);
+INSERT INTO "public"."tb_model_service" ("id", "async", "event_type", "service_type", "identifier", "name", "remark", "product_type_id", "icon_id", "custom", "required", "product_id") VALUES (2, 't', 1, 1, 'canmand', '指令下发', '指令下发', 1, NULL, 'f', 'f', NULL);
+INSERT INTO "public"."tb_model_service" ("id", "async", "event_type", "service_type", "identifier", "name", "remark", "product_type_id", "icon_id", "custom", "required", "product_id") VALUES (10, 'f', NULL, 1, 'customservice', '自定义服务', '测试', 1, NULL, 't', 'f', 1);
 COMMIT;
 
 -- ----------------------------
@@ -785,13 +736,6 @@ SELECT setval('"public"."tb_dict_id_seq"', 166988013104439297, true);
 -- ----------------------------
 -- Alter sequences owned by
 -- ----------------------------
-ALTER SEQUENCE "public"."tb_iot_rule_id_seq"
-OWNED BY "public"."tb_iot_rule"."id";
-SELECT setval('"public"."tb_iot_rule_id_seq"', 3, true);
-
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
 ALTER SEQUENCE "public"."tb_model_property_id_seq"
 OWNED BY "public"."tb_model_property"."id";
 SELECT setval('"public"."tb_model_property_id_seq"', 6, true);
@@ -842,6 +786,9 @@ CREATE UNIQUE INDEX "ux_tb_device_device_key" ON "public"."tb_device" USING btre
   "device_key" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
 
+-- 网关-子设备拓扑查询索引
+CREATE INDEX IF NOT EXISTS "idx_device_parent_id" ON "public"."tb_device" ("parent_id");
+
 -- ----------------------------
 -- Primary Key structure for table tb_device
 -- ----------------------------
@@ -876,18 +823,6 @@ ALTER TABLE "public"."tb_icon" ADD CONSTRAINT "icon_pkey" PRIMARY KEY ("id");
 -- Primary Key structure for table tb_iot_driver
 -- ----------------------------
 ALTER TABLE "public"."tb_iot_driver" ADD CONSTRAINT "iot_driver_pkey" PRIMARY KEY ("driver_id");
-
--- ----------------------------
--- Indexes structure for table tb_iot_rule
--- ----------------------------
-CREATE UNIQUE INDEX "ux_iot_rule_name" ON "public"."tb_iot_rule" USING btree (
-  "name" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
-);
-
--- ----------------------------
--- Primary Key structure for table tb_iot_rule
--- ----------------------------
-ALTER TABLE "public"."tb_iot_rule" ADD CONSTRAINT "tb_iot_rule_pkey" PRIMARY KEY ("id");
 
 -- ----------------------------
 -- Indexes structure for table tb_message_receive
@@ -1041,7 +976,7 @@ CREATE INDEX "idx_email_config_status" ON "public"."tb_email_config" ("status");
 
 -- 规则链表
 DROP TABLE IF EXISTS tb_rule_chain;
-CREATE TABLE tb_rule_chain (
+CREATE TABLE IF NOT EXISTS tb_rule_chain (
                                id SERIAL PRIMARY KEY,
                                name VARCHAR(100) NOT NULL,
                                description VARCHAR(500),
@@ -1068,7 +1003,7 @@ COMMENT ON COLUMN tb_rule_chain.configuration IS '节点和连接配置(JSON)';
 
 -- 告警表
 DROP TABLE IF EXISTS tb_alarm;
-CREATE TABLE tb_alarm (
+CREATE TABLE IF NOT EXISTS tb_alarm (
                           id SERIAL PRIMARY KEY,
                           alarm_type VARCHAR(100) NOT NULL,
                           alarm_name VARCHAR(200),
@@ -1117,7 +1052,7 @@ CREATE INDEX idx_alarm_start_ts ON tb_alarm(start_ts);
 
 
 
-CREATE TABLE tb_push_config (
+CREATE TABLE IF NOT EXISTS tb_push_config (
     -- ==================== 基础字段 ====================
                                 id SERIAL PRIMARY KEY,
                                 name VARCHAR(100) NOT NULL,
@@ -1181,5 +1116,321 @@ COMMENT ON COLUMN tb_push_config.mqtt_clean_session IS 'MQTT清除会话';
 COMMENT ON COLUMN tb_push_config.mqtt_options IS 'MQTT扩展配置(JSON数组格式)';
 
 -- 创建索引
-CREATE INDEX idx_push_config_type ON tb_push_config(type);
-CREATE INDEX idx_push_config_enabled ON tb_push_config(is_enabled);
+CREATE INDEX IF NOT EXISTS idx_push_config_type ON tb_push_config(type);
+CREATE INDEX IF NOT EXISTS idx_push_config_enabled ON tb_push_config(is_enabled);
+
+-- ============================================================================
+-- 2026-07 起新增的业务表 (与实体类 @TableName 一一对应)
+--
+-- 本节内容由 doc/sql/migrations/ 下的增量迁移回灌而成, 二者需保持同步:
+--   tb_push_log              <- 20260709_001_push_log.sql
+--   tb_device_group          <- 20260714_001_device_group_tag.sql
+--   tb_device_tag            <- 20260714_001_device_group_tag.sql
+--   tb_device_group_relation <- 20260714_001_device_group_tag.sql
+--   tb_device_tag_relation   <- 20260714_001_device_group_tag.sql
+--   tb_alarm_comment         <- 20260714_002_alarm_comment.sql
+--   tb_rule_execution_log    <- 20260714_003_rule_execution_log.sql
+--   tb_dashboard             <- 20260715_001_dashboard.sql
+--   tb_firmware              <- 20260715_002_ota_firmware.sql
+--   tb_ota_task              <- 20260715_002_ota_firmware.sql
+--   tb_modbus_config         <- 20260715_003_modbus.sql
+--   tb_webhook_ingress       <- 20260720_001_webhook_ingress.sql
+--   tb_device_shadow         <- 20260722_002_device_shadow.sql
+--   tb_audit_log             <- 20260722_003_audit_log.sql
+--   tb_im_push_config        <- 20260723_001_sprint3_im_push_device_topology.sql
+--   tb_opcua_config          <- V20260803__opcua_config.sql
+--
+-- 校验: python scripts/verify_schema.py
+-- ============================================================================
+
+-- ----------------------------
+-- Table structure for tb_push_log
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_push_log (
+    id              SERIAL PRIMARY KEY,
+    push_config_id   INTEGER      NOT NULL,
+    push_config_name VARCHAR(100),
+    event_type       VARCHAR(50)  DEFAULT 'push.test',
+    success          BOOLEAN      NOT NULL DEFAULT false,
+    status_code      INTEGER,
+    message          TEXT,
+    response_body    TEXT,
+    device_key       VARCHAR(100),
+    duration_ms      BIGINT,
+    create_time      TIMESTAMP    NOT NULL DEFAULT now(),
+    update_time      TIMESTAMP
+);
+COMMENT ON TABLE  tb_push_log IS '推送交付日志';
+COMMENT ON COLUMN tb_push_log.push_config_id   IS '推送配置ID';
+COMMENT ON COLUMN tb_push_log.push_config_name IS '推送配置名称(冗余，便于查询)';
+COMMENT ON COLUMN tb_push_log.event_type       IS '事件类型';
+COMMENT ON COLUMN tb_push_log.success          IS '是否成功';
+COMMENT ON COLUMN tb_push_log.status_code      IS 'HTTP状态码';
+COMMENT ON COLUMN tb_push_log.message          IS '结果消息';
+COMMENT ON COLUMN tb_push_log.response_body    IS '响应体(截断)';
+COMMENT ON COLUMN tb_push_log.device_key       IS '触发设备';
+COMMENT ON COLUMN tb_push_log.duration_ms      IS '耗时(毫秒)';
+CREATE INDEX IF NOT EXISTS idx_push_log_config_id ON tb_push_log(push_config_id);
+CREATE INDEX IF NOT EXISTS idx_push_log_create_time ON tb_push_log(create_time);
+
+-- ----------------------------
+-- Table structure for tb_device_group
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_device_group (
+    id          SERIAL PRIMARY KEY,
+    parent_id   INTEGER     NOT NULL DEFAULT -1,
+    name        VARCHAR(100) NOT NULL,
+    description VARCHAR(500),
+    create_time TIMESTAMP   NOT NULL DEFAULT now(),
+    update_time TIMESTAMP   NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE  tb_device_group IS '设备分组';
+COMMENT ON COLUMN tb_device_group.parent_id IS '父分组ID, -1=根';
+COMMENT ON COLUMN tb_device_group.name IS '分组名称';
+COMMENT ON COLUMN tb_device_group.description IS '描述';
+
+-- ----------------------------
+-- Table structure for tb_device_tag
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_device_tag (
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL UNIQUE,
+    color       VARCHAR(20)  DEFAULT '#6366f1',
+    create_time TIMESTAMP   NOT NULL DEFAULT now(),
+    update_time TIMESTAMP   NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE  tb_device_tag IS '设备标签';
+COMMENT ON COLUMN tb_device_tag.name IS '标签名称';
+COMMENT ON COLUMN tb_device_tag.color IS '标签颜色';
+
+-- ----------------------------
+-- Table structure for tb_device_group_relation
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_device_group_relation (
+    id          SERIAL PRIMARY KEY,
+    device_id   INTEGER NOT NULL,
+    group_id    INTEGER NOT NULL,
+    create_time TIMESTAMP NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE tb_device_group_relation IS '设备-分组关联';
+CREATE UNIQUE INDEX IF NOT EXISTS uk_device_group ON tb_device_group_relation(device_id, group_id);
+CREATE INDEX IF NOT EXISTS idx_dgr_group_id ON tb_device_group_relation(group_id);
+
+-- ----------------------------
+-- Table structure for tb_device_tag_relation
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_device_tag_relation (
+    id          SERIAL PRIMARY KEY,
+    device_id   INTEGER NOT NULL,
+    tag_id      INTEGER NOT NULL,
+    create_time TIMESTAMP NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE tb_device_tag_relation IS '设备-标签关联';
+CREATE UNIQUE INDEX IF NOT EXISTS uk_device_tag ON tb_device_tag_relation(device_id, tag_id);
+CREATE INDEX IF NOT EXISTS idx_dtr_tag_id ON tb_device_tag_relation(tag_id);
+
+-- ----------------------------
+-- Table structure for tb_alarm_comment
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_alarm_comment (
+    id          SERIAL PRIMARY KEY,
+    alarm_id    INTEGER NOT NULL,
+    comment     TEXT NOT NULL,
+    action      VARCHAR(30) DEFAULT 'COMMENT',
+    author      VARCHAR(100),
+    create_time TIMESTAMP NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE  tb_alarm_comment IS '告警评论/操作记录';
+COMMENT ON COLUMN tb_alarm_comment.alarm_id IS '告警ID';
+COMMENT ON COLUMN tb_alarm_comment.comment IS '评论内容';
+COMMENT ON COLUMN tb_alarm_comment.action IS '操作类型: COMMENT, ACKNOWLEDGE, CLEAR, ESCALATE';
+COMMENT ON COLUMN tb_alarm_comment.author IS '操作人';
+CREATE INDEX IF NOT EXISTS idx_alarm_comment_alarm_id ON tb_alarm_comment(alarm_id);
+
+-- ----------------------------
+-- Table structure for tb_rule_execution_log
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_rule_execution_log (
+    id              SERIAL PRIMARY KEY,
+    rule_chain_id   INTEGER NOT NULL,
+    device_key      VARCHAR(100),
+    device_id       INTEGER,
+    device_name     VARCHAR(100),
+    message_type    VARCHAR(30),
+    event_time      TIMESTAMP,
+    success         BOOLEAN NOT NULL DEFAULT true,
+    duration_ms     BIGINT,
+    trace_count     INTEGER DEFAULT 0,
+    traces          JSONB,
+    input_snapshot  JSONB,
+    create_time     TIMESTAMP NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE  tb_rule_execution_log IS '规则链执行日志';
+COMMENT ON COLUMN tb_rule_execution_log.rule_chain_id   IS '规则链ID';
+COMMENT ON COLUMN tb_rule_execution_log.device_key      IS '设备Key';
+COMMENT ON COLUMN tb_rule_execution_log.traces          IS '执行轨迹(JSON)';
+COMMENT ON COLUMN tb_rule_execution_log.input_snapshot  IS '输入快照(JSON)';
+CREATE INDEX IF NOT EXISTS idx_rule_exec_log_chain  ON tb_rule_execution_log(rule_chain_id);
+CREATE INDEX IF NOT EXISTS idx_rule_exec_log_device ON tb_rule_execution_log(device_key);
+CREATE INDEX IF NOT EXISTS idx_rule_exec_log_time   ON tb_rule_execution_log(create_time);
+
+-- ----------------------------
+-- Table structure for tb_dashboard
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_dashboard (
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL,
+    description VARCHAR(500),
+    layout      JSONB NOT NULL DEFAULT '[]'::jsonb,
+    is_default  BOOLEAN NOT NULL DEFAULT false,
+    create_time TIMESTAMP NOT NULL DEFAULT now(),
+    update_time TIMESTAMP NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE  tb_dashboard IS '自定义仪表板';
+COMMENT ON COLUMN tb_dashboard.layout IS 'Array of widget configs: {id, type, title, x, y, w, h, config}';
+
+-- ----------------------------
+-- Table structure for tb_firmware
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_firmware (
+    id          SERIAL PRIMARY KEY,
+    product_id  INTEGER NOT NULL,
+    name        VARCHAR(200) NOT NULL,
+    version     VARCHAR(50) NOT NULL,
+    file_path   VARCHAR(500) NOT NULL,
+    file_size   BIGINT DEFAULT 0,
+    checksum    VARCHAR(128),
+    description TEXT,
+    status      VARCHAR(20) DEFAULT 'DRAFT',  -- DRAFT / PUBLISHED / ARCHIVED
+    created_by  VARCHAR(50),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE  tb_firmware IS 'OTA 固件包';
+
+-- ----------------------------
+-- Table structure for tb_ota_task
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_ota_task (
+    id          SERIAL PRIMARY KEY,
+    firmware_id INTEGER NOT NULL,
+    group_id    INTEGER,
+    device_ids  JSONB DEFAULT '[]',   -- target device id array
+    status      VARCHAR(20) DEFAULT 'PENDING',  -- PENDING / RUNNING / COMPLETED / FAILED
+    total       INTEGER DEFAULT 0,
+    success     INTEGER DEFAULT 0,
+    fail        INTEGER DEFAULT 0,
+    progress    JSONB DEFAULT '{}',   -- {deviceId: "PENDING|UPGRADING|SUCCESS|FAIL"}
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE  tb_ota_task IS 'OTA 升级任务';
+
+-- ----------------------------
+-- Table structure for tb_modbus_config
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_modbus_config (
+    id           SERIAL PRIMARY KEY,
+    device_id    INTEGER NOT NULL,
+    host         VARCHAR(100) NOT NULL,
+    port         INTEGER NOT NULL DEFAULT 502,
+    unit_id      SMALLINT NOT NULL DEFAULT 1,
+    interval_ms  INTEGER NOT NULL DEFAULT 5000,
+    register_map JSONB NOT NULL DEFAULT '[]'::jsonb,  -- [{identifier, function, address, count, dataType, scale}]
+    enabled      BOOLEAN NOT NULL DEFAULT true,
+    create_time  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE tb_modbus_config IS 'Modbus TCP 设备配置';
+CREATE INDEX IF NOT EXISTS idx_modbus_config_device ON tb_modbus_config(device_id);
+
+-- ----------------------------
+-- Table structure for tb_webhook_ingress
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_webhook_ingress (
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL,
+    token       VARCHAR(64) NOT NULL UNIQUE,
+    secret      VARCHAR(64) NOT NULL,
+    device_id   INTEGER NOT NULL,
+    enabled     BOOLEAN NOT NULL DEFAULT true,
+    description VARCHAR(500),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE tb_webhook_ingress IS 'Webhook 接入配置';
+CREATE INDEX IF NOT EXISTS idx_webhook_ingress_device ON tb_webhook_ingress(device_id);
+
+-- ----------------------------
+-- Table structure for tb_device_shadow
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_device_shadow (
+    id              SERIAL PRIMARY KEY,
+    device_id       INTEGER NOT NULL REFERENCES tb_device(id) ON DELETE CASCADE,
+    desired_state   JSONB NOT NULL DEFAULT '{}'::jsonb,
+    reported_state  JSONB NOT NULL DEFAULT '{}'::jsonb,
+    version         INTEGER NOT NULL DEFAULT 0,
+    create_time     TIMESTAMP NOT NULL DEFAULT now(),
+    update_time     TIMESTAMP NOT NULL DEFAULT now(),
+    UNIQUE(device_id)
+);
+COMMENT ON TABLE  tb_device_shadow IS '设备影子';
+COMMENT ON COLUMN tb_device_shadow.desired_state  IS '期望状态 JSON';
+COMMENT ON COLUMN tb_device_shadow.reported_state IS '上报状态 JSON';
+COMMENT ON COLUMN tb_device_shadow.version        IS '乐观锁版本号';
+
+-- ----------------------------
+-- Table structure for tb_audit_log
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_audit_log (
+    id          SERIAL PRIMARY KEY,
+    username    VARCHAR(50),
+    action      VARCHAR(50) NOT NULL,
+    resource    VARCHAR(100),
+    resource_id VARCHAR(50),
+    detail      TEXT,
+    ip          VARCHAR(50),
+    create_time TIMESTAMP NOT NULL DEFAULT NOW(),
+    update_time TIMESTAMP NOT NULL DEFAULT NOW()
+);
+COMMENT ON TABLE tb_audit_log IS '操作审计日志';
+CREATE INDEX IF NOT EXISTS idx_audit_log_username    ON tb_audit_log(username);
+CREATE INDEX IF NOT EXISTS idx_audit_log_create_time ON tb_audit_log(create_time);
+
+-- ----------------------------
+-- Table structure for tb_im_push_config
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_im_push_config (
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(100)  NOT NULL,
+    platform    VARCHAR(20)   NOT NULL,  -- DINGTALK / WECOM / FEISHU
+    webhook_url VARCHAR(500)  NOT NULL,
+    secret      VARCHAR(200),
+    is_enabled  BOOLEAN       NOT NULL DEFAULT TRUE,
+    description VARCHAR(500),
+    create_time TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE  tb_im_push_config IS 'IM 推送配置(钉钉/企微/飞书)';
+COMMENT ON COLUMN tb_im_push_config.platform IS '平台: DINGTALK / WECOM / FEISHU';
+
+-- ----------------------------
+-- Table structure for tb_opcua_config
+-- ----------------------------
+CREATE TABLE IF NOT EXISTS tb_opcua_config (
+    id              SERIAL PRIMARY KEY,
+    device_id       INTEGER NOT NULL REFERENCES tb_device(id) ON DELETE CASCADE,
+    endpoint_url    VARCHAR(500) NOT NULL,
+    security_mode   VARCHAR(50) DEFAULT 'NONE',
+    username        VARCHAR(100),
+    password        VARCHAR(200),
+    interval_ms     INTEGER DEFAULT 5000,
+    node_map        TEXT DEFAULT '[]',
+    enabled         BOOLEAN DEFAULT TRUE,
+    create_time     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+COMMENT ON TABLE  tb_opcua_config IS 'OPC UA 设备配置';
+COMMENT ON COLUMN tb_opcua_config.endpoint_url IS 'OPC UA 端点 URL, 如 opc.tcp://192.168.1.100:4840';
+COMMENT ON COLUMN tb_opcua_config.security_mode IS '安全模式: NONE / SIGN / SIGN_ENCRYPT';
+COMMENT ON COLUMN tb_opcua_config.node_map IS '节点映射 JSON: [{identifier, nodeId, dataType, scale}]';
