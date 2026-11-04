@@ -27,8 +27,8 @@ public class EmailConfigController {
 
     @PostMapping("/page")
     @Operation(summary = "分页列表")
-    public PageResult<EmailConfigVo> page(@RequestBody @Valid EmailConfigPageQuery query) {
-        return emailConfigService.pageByQuery(query);
+    public BaseResult<PageResult<EmailConfigVo>> page(@RequestBody @Valid EmailConfigPageQuery query) {
+        return BaseResult.success(emailConfigService.pageByQuery(query));
     }
 
     @PostMapping

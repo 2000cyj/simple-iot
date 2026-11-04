@@ -24,6 +24,52 @@ com.github.dingdaoyi.controller
 
 包括设备、产品、规则链、告警、字典、用户、消息通知、文件等已添加 Swagger/OpenAPI 注解的接口。
 
+## 响应信封
+
+所有接口使用同一个响应信封，成功与失败的解析方式一致：
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "success": true,
+  "data": {}
+}
+```
+
+`success` 由 `code` 推导。异常（包括全局异常处理器抛出的异常）同样返回这三个字段，只是 `code` 非 200 且 `success` 为 `false`。
+
+分页接口在该信封内嵌套分页载荷，载荷包含 `records` / `total` / `current` / `size`：
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "success": true,
+  "data": {
+    "records": [],
+    "total": 100,
+    "current": 1,
+    "size": 20
+  }
+}
+```
+
+> **破坏性变更。** 之前的版本把分页载荷放在顶层：数组在 `data` 中，`total` / `current` / `size` 与 `data` 平级。现在请从 `data.records` 取列表、从 `data.total` 取总记录数。
+
+分页接口：
+
+- `POST /alarm/page`
+- `POST /device/page`
+- `POST /device/data/event/logs`
+- `POST /email-config/page`
+- `POST /message/receive/page`
+- `POST /product/page`
+- `POST /product/type/page`
+- `POST /push-config/page`
+- `POST /rule-chain/page`
+- `GET /rule-chain/{ruleChainId}/execution-logs`
+
 ## 约定
 
 - 规范版本为 OpenAPI `3.1.0`。

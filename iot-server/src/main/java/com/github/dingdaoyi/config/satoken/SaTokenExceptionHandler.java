@@ -34,7 +34,7 @@ public class SaTokenExceptionHandler {
     @ExceptionHandler(value = NotLoginException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public BaseResult<Object> notLoginException(NotLoginException e) {
-        return BaseResult.fail(ErrorCode.UNAUTHORIZED.getCode(), ErrorCode.UNAUTHORIZED.getMessage());
+        return BaseResult.fail(ErrorCode.UNAUTHORIZED.getCode(), ErrorCode.UNAUTHORIZED.getMsg());
     }
 
     /**

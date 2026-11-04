@@ -47,8 +47,8 @@ public class AlarmController {
 
     @PostMapping("page")
     @Operation(summary = "告警分页列表")
-    public PageResult<AlarmPageVo> page(@RequestBody AlarmPageQuery query) {
-        return alarmService.pageByQuery(query);
+    public BaseResult<PageResult<AlarmPageVo>> page(@RequestBody AlarmPageQuery query) {
+        return BaseResult.success(alarmService.pageByQuery(query));
     }
 
     @PutMapping("{id}/acknowledge")

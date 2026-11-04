@@ -72,8 +72,8 @@ public class RuleChainController {
 
     @PostMapping("page")
     @Operation(summary = "规则链分页列表")
-    public PageResult<RuleChainPageVo> page(@RequestBody @Valid RuleChainPageQuery query) {
-        return ruleChainService.pageByQuery(query);
+    public BaseResult<PageResult<RuleChainPageVo>> page(@RequestBody @Valid RuleChainPageQuery query) {
+        return BaseResult.success(ruleChainService.pageByQuery(query));
     }
 
     @PutMapping("{id}/enable")

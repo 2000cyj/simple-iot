@@ -36,8 +36,8 @@ public class MessageReceiveController {
 
     @PostMapping("page")
     @Operation(summary = "分页获取")
-    public PageResult<MessageReceive> page(@RequestBody MessageRecivePageQuery pageQuery) {
-        return messageReceiveService.pageByQuery(pageQuery);
+    public BaseResult<PageResult<MessageReceive>> page(@RequestBody MessageRecivePageQuery pageQuery) {
+        return BaseResult.success(messageReceiveService.pageByQuery(pageQuery));
     }
 
     @PostMapping

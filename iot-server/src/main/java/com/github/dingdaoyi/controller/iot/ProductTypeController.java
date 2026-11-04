@@ -37,8 +37,8 @@ public class ProductTypeController {
 
     @PostMapping("page")
     @Operation(summary = "获取产品类型")
-    public PageResult<ProductType> page(@RequestBody PageQuery query) {
-        return productTypeService.pageByQuery(query);
+    public BaseResult<PageResult<ProductType>> page(@RequestBody PageQuery query) {
+        return BaseResult.success(productTypeService.pageByQuery(query));
     }
 
 

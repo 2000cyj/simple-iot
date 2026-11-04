@@ -47,8 +47,8 @@ public class ProductController {
 
     @PostMapping("page")
     @Operation(summary = "分页获取")
-    public PageResult<ProductPageVo> page(@RequestBody ProductPageQuery pageQuery) {
-        return productService.pageByQuery(pageQuery);
+    public BaseResult<PageResult<ProductPageVo>> page(@RequestBody ProductPageQuery pageQuery) {
+        return BaseResult.success(productService.pageByQuery(pageQuery));
     }
 
     @PostMapping

@@ -112,7 +112,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = {HttpRequestMethodNotSupportedException.class})
     @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
     public BaseResult<Object> httpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
-        return BaseResult.fail(ErrorCode.METHOD_NOT_ALLOWED.getCode(), ErrorCode.METHOD_NOT_ALLOWED.getMessage());
+        return BaseResult.fail(ErrorCode.METHOD_NOT_ALLOWED.getCode(), ErrorCode.METHOD_NOT_ALLOWED.getMsg());
     }
 
     /**
@@ -174,7 +174,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public BaseResult<Object> exceptionHandler(Exception e) {
         log.error("sytem_error", e);
-        return BaseResult.fail(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), ErrorCode.INTERNAL_SERVER_ERROR.getMessage());
+        return BaseResult.fail(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), ErrorCode.INTERNAL_SERVER_ERROR.getMsg());
     }
 
     /**
@@ -186,7 +186,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = NoResourceFoundException.class)
     public BaseResult<Object> noResourceFoundException(NoResourceFoundException exception) {
         log.error("路径异常:{}", exception.getMessage());
-        return BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), ErrorCode.NOT_FOUND.getMessage());
+        return BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), ErrorCode.NOT_FOUND.getMsg());
     }
 
     /**

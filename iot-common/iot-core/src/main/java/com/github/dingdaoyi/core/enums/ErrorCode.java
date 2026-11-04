@@ -41,6 +41,6 @@ public enum ErrorCode {
     private final Integer code;
 
     @Getter
-    private final String message;
+    private final String msg;
 
 }

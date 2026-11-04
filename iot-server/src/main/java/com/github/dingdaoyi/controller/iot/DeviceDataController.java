@@ -43,8 +43,8 @@ public class DeviceDataController {
 
     @PostMapping("event/logs")
     @Operation(summary = "设备日志数据")
-    public PageResult<DeviceEventDataVo> eventLog(@RequestBody DeviceDataQuery query) {
-        return deviceDataService.eventLogs(query);
+    public BaseResult<PageResult<DeviceEventDataVo>> eventLog(@RequestBody DeviceDataQuery query) {
+        return BaseResult.success(deviceDataService.eventLogs(query));
     }
 
     @PostMapping("property/aggregate")

@@ -67,8 +67,8 @@ public class PushConfigController {
 
     @PostMapping("page")
     @Operation(summary = "配置分页列表")
-    public PageResult<PushConfigPageVo> page(@RequestBody @Valid PushConfigPageQuery query) {
-        return pushConfigService.pageByQuery(query);
+    public BaseResult<PageResult<PushConfigPageVo>> page(@RequestBody @Valid PushConfigPageQuery query) {
+        return BaseResult.success(pushConfigService.pageByQuery(query));
     }
 
     @GetMapping("list")

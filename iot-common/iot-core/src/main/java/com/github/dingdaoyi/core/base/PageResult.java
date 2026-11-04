@@ -1,29 +1,25 @@
 package com.github.dingdaoyi.core.base;
 
-import com.github.dingdaoyi.core.enums.ErrorCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
-import java.util.Iterator;
 import java.util.List;
 
 /**
- * 分页结果
+ * 分页数据。
+ *
+ * <p>纯分页载荷，只承载分页业务数据（列表 + 总数 + 页码 + 页大小），
+ * 不再自带 code/msg 信封字段。对外 HTTP 响应统一由 {@link BaseResult} 包裹，
+ * 即 {@code BaseResult<PageResult<T>>}，保证同一接口成功/失败的响应信封一致。</p>
  *
  * @author dingyunwei
  */
 @Data
-@Schema(description = "分页结果")
-public class PageResult<T> implements Iterable<T>{
-
-    @Schema(description = "响应码")
-    private Integer code;
-
-    @Schema(description = "响应消息")
-    private String msg;
+@Schema(description = "分页数据")
+public class PageResult<T> {
 
     @Schema(description = "数据列表")
-    private List<T> data;
+    private List<T> records;
 
     @Schema(description = "总记录数")
     private Long total;
@@ -37,19 +33,14 @@ public class PageResult<T> implements Iterable<T>{
     public PageResult() {
     }
 
-    public PageResult(List<T> data, Long total, Long current, Long size) {
-        this.data = data;
+    public PageResult(List<T> records, Long total, Long current, Long size) {
+        this.records = records;
         this.total = total;
         this.current = current;
         this.size = size;
-        this.code = ErrorCode.SUCCESS.getCode();
     }
 
     public static <T> PageResult<T> of(List<T> records, Long total, Long current, Long size) {
         return new PageResult<>(records, total, current, size);
-    }
-    @Override
-    public Iterator<T> iterator() {
-        return data.iterator();
     }
 }

@@ -123,7 +123,7 @@ class InfluxDataProcessorTest {
 
         var logs = processor.eventLogs(query);
 
-        assertThat(logs.getData()).isEmpty();
+        assertThat(logs.getRecords()).isEmpty();
         verify(influxDBClient).queryRows(anyString(), anyMap());
     }
 
@@ -139,6 +139,6 @@ class InfluxDataProcessorTest {
 
         var logs = processor.eventLogs(query);
 
-        assertThat(logs.getData()).isEmpty();
+        assertThat(logs.getRecords()).isEmpty();
     }
 }

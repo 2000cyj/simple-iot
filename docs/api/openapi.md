@@ -24,6 +24,52 @@ com.github.dingdaoyi.controller
 
 This includes device, product, rule-chain, alarm, dictionary, user, notification, and file endpoints annotated with Swagger/OpenAPI metadata.
 
+## Response envelopes
+
+Every endpoint answers with the same envelope, so success and failure are read the same way:
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "success": true,
+  "data": {}
+}
+```
+
+`success` is derived from `code`. Errors - including the ones raised by the global exception handler - return the same three fields with a non-200 `code` and `success: false`.
+
+Paginated endpoints wrap a page payload in that envelope. The payload carries `records` / `total` / `current` / `size`:
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "success": true,
+  "data": {
+    "records": [],
+    "total": 100,
+    "current": 1,
+    "size": 20
+  }
+}
+```
+
+> **Breaking change.** Earlier releases returned the page payload at the top level: the array was in `data` and `total` / `current` / `size` were its siblings. Read the array from `data.records` and the row count from `data.total`.
+
+Paginated endpoints:
+
+- `POST /alarm/page`
+- `POST /device/page`
+- `POST /device/data/event/logs`
+- `POST /email-config/page`
+- `POST /message/receive/page`
+- `POST /product/page`
+- `POST /product/type/page`
+- `POST /push-config/page`
+- `POST /rule-chain/page`
+- `GET /rule-chain/{ruleChainId}/execution-logs`
+
 ## Notes
 
 - The spec version is OpenAPI `3.1.0`.
