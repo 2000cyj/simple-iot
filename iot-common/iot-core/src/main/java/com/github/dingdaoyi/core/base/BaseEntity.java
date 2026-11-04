@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 基础实体类
- *
- * @author dingyunwei
  */
 @Data
 public abstract class BaseEntity {
