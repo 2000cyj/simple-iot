@@ -1,0 +1,15 @@
+# iot-web 前端工作区
+# 说明：pnpm >= 10.19 使用 allowBuilds 白名单批准依赖的构建脚本（postinstall）。
+#       pnpm 9 不认识该字段会静默忽略（它默认就执行构建脚本），故两版均可安装。
+packages:
+  - "."
+
+allowBuilds:
+  # 文件监听原生模块（Vite dev 热更新）
+  '@parcel/watcher': true
+  # Vite 打包器，必须执行 postinstall 下载对应平台的 esbuild 二进制
+  esbuild: true
+  # napi-rs 预编译产物（ESLint 解析链依赖）
+  unrs-resolver: true
+  # Vue 2/3 兼容层，postinstall 会改写内部入口指向 Vue 3 实现
+  vue-demi: true
