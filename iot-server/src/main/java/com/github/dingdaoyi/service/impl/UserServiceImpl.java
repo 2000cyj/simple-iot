@@ -1,7 +1,7 @@
 package com.github.dingdaoyi.service.impl;
 
 import cn.dev33.satoken.secure.BCrypt;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.BusinessException;
 import org.springframework.stereotype.Service;
 
@@ -28,10 +28,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public boolean changePassword(Integer userId, String oldPassword, String newPassword) {
         User user = getById(userId);
         if (user == null) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "用户不存在");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "用户不存在");
         }
         if (!BCrypt.checkpw(oldPassword, user.getPassword())) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "原密码错误");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "原密码错误");
         }
         validatePassword(newPassword);
         user.setPassword(BCrypt.hashpw(newPassword));
@@ -47,7 +47,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     public static void validatePassword(String password) {
         if (password == null || !PWD_PATTERN.matcher(password).matches()) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "密码需至少8位，包含大小写字母和数字");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "密码需至少8位，包含大小写字母和数字");
         }
     }
 }

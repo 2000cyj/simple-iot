@@ -3,7 +3,7 @@ package com.github.dingdaoyi.controller.iot;
 import com.github.dingdaoyi.controller.iot.dto.RuleChainDebugRequest;
 import com.github.dingdaoyi.core.base.BaseResult;
 import com.github.dingdaoyi.core.base.PageResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.entity.Product;
 import com.github.dingdaoyi.entity.RuleChain;
 import com.github.dingdaoyi.entity.enu.RuleNodeType;
@@ -14,9 +14,7 @@ import com.github.dingdaoyi.model.vo.RuleChainDebugResultVo;
 import com.github.dingdaoyi.model.vo.RuleChainDetailVo;
 import com.github.dingdaoyi.model.vo.RuleChainValidationResultVo;
 import com.github.dingdaoyi.model.vo.RuleChainPageVo;
-import com.github.dingdaoyi.proto.model.tsl.TslModel;
 import com.github.dingdaoyi.proto.model.tsl.TslProperty;
-import com.github.dingdaoyi.rule.RuleChainEngine;
 import com.github.dingdaoyi.rule.RuleContext;
 import com.github.dingdaoyi.service.ProductService;
 import com.github.dingdaoyi.service.RuleChainService;
@@ -51,7 +49,7 @@ public class RuleChainController {
     public BaseResult<RuleChainDetailVo> details(@PathVariable Integer id) {
         return ruleChainService.details(id)
             .map(BaseResult::success)
-            .orElse(BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "规则链不存在"));
+            .orElse(BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "规则链不存在"));
     }
 
     @PostMapping
@@ -194,7 +192,7 @@ public class RuleChainController {
             @PathVariable Integer logId) {
         com.github.dingdaoyi.entity.RuleExecutionLog log = ruleExecutionLogService.getById(logId);
         if (log == null) {
-            return BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "执行日志不存在");
+            return BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "执行日志不存在");
         }
         return BaseResult.success(log);
     }
@@ -205,11 +203,11 @@ public class RuleChainController {
             @PathVariable Integer logId) {
         com.github.dingdaoyi.entity.RuleExecutionLog log = ruleExecutionLogService.getById(logId);
         if (log == null) {
-            return BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "执行日志不存在");
+            return BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "执行日志不存在");
         }
         RuleChain ruleChain = ruleChainService.getById(log.getRuleChainId());
         if (ruleChain == null) {
-            return BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "规则链不存在");
+            return BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "规则链不存在");
         }
 
         // 从日志重建上下文

@@ -3,7 +3,7 @@ package com.github.dingdaoyi.controller.iot;
 import com.github.dingdaoyi.entity.Product;
 import com.github.dingdaoyi.core.base.BaseResult;
 import com.github.dingdaoyi.core.base.PageResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.BusinessException;
 import com.github.dingdaoyi.model.query.ProductPageQuery;
 import com.github.dingdaoyi.model.vo.ProductPageVo;
@@ -55,10 +55,10 @@ public class ProductController {
     @Operation(summary = "添加产品")
     public BaseResult<Boolean> save(@RequestBody @Valid ProductAddQuery query) {
         if (!productTypeService.existsById(query.getProductTypeId())) {
-            return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), "产品类型不存在");
+            return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), "产品类型不存在");
         }
         if (productService.existsUnique(query.getModel(), query.getManufacturer(), query.getProductTypeId())) {
-            return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), "产品已存在,请勿重复添加!");
+            return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), "产品已存在,请勿重复添加!");
         }
         return BaseResult.success(productService.add(query.toEntity()));
     }
@@ -74,10 +74,10 @@ public class ProductController {
     @Operation(summary = "删除产品")
     public BaseResult<Boolean> delete(@PathVariable Integer id) {
         if (modelServiceService.existsByProduct(id)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST.getCode(), "产品下存在物模型信息, 无法删除");
+            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(), "产品下存在物模型信息, 无法删除");
         }
         if (modelPropertyService.existsByProduct(id)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST.getCode(), "产品下存在物模型信息, 无法删除");
+            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(), "产品下存在物模型信息, 无法删除");
         }
         return BaseResult.success(productService.removeById(id));
     }
@@ -95,7 +95,7 @@ public class ProductController {
     public BaseResult<TslModel> tslDetails(@PathVariable Integer productId) {
         Product product = productService.getById(productId);
         if (product == null) {
-            return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), "数据不存在");
+            return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), "数据不存在");
         }
         return tslModelService.findByProductKey(product.getProductKey())
                 .map(BaseResult::success).orElse(BaseResult.fail("未查询到物模型信息"));

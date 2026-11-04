@@ -179,7 +179,7 @@ That's it. PostgreSQL, RustFS (S3-compatible), the backend and the frontend all 
 ```
 simple-iot/
 ├── iot-server/         # Main Spring Boot service (REST + MQTT broker + rule engine)
-├── iot-common/         # Shared base classes (BaseEntity, ResultCode, paging)
+├── iot-common/         # Shared base classes (BaseEntity, ErrorCode, paging)
 ├── iot-driver/         # System-supplied protocol drivers
 ├── iot-web/            # Vue 3 admin frontend
 ├── doc/                # Docs, SQL schema, screenshots, brand assets

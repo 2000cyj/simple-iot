@@ -1,12 +1,13 @@
 package com.github.dingdaoyi.core.enums;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 /**
  * 响应状态码枚举
- *
- * @author dingyunwei
  */
-public enum ResultCode {
+@AllArgsConstructor
+public enum ErrorCode {
 
     SUCCESS(200, "成功"),
 
@@ -36,21 +37,10 @@ public enum ResultCode {
     UNKNOWN(999, "未知错误"),
     ;
 
+    @Getter
     private final Integer code;
 
-    public String getMessage() {
-        return message;
-    }
-
-    public Integer getCode() {
-        return code;
-    }
-
+    @Getter
     private final String message;
-
-    ResultCode(Integer code, String message) {
-        this.code = code;
-        this.message = message;
-    }
 
 }

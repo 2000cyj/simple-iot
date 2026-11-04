@@ -2,7 +2,7 @@ package com.github.dingdaoyi.config.base;
 
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.github.dingdaoyi.core.base.BaseResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.BusinessException;
 import com.github.dingdaoyi.proto.model.ProtocolException;
 import jakarta.validation.ConstraintViolationException;
@@ -45,7 +45,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = MethodArgumentTypeMismatchException.class)
     public BaseResult<Object> methodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
         final MethodParameter parameter = e.getParameter();
-        return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), "参数不存在:" + parameter.getParameterName());
+        return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), "参数不存在:" + parameter.getParameterName());
     }
 
     @ResponseBody
@@ -72,7 +72,7 @@ public class GlobalExceptionHandler {
     public BaseResult<Object> protocolException(ProtocolException e) {
         log.warn("协议脚本异常: device={}, type={}, msg={}",
                 e.getDeviceKey(), e.getType(), e.getMessage());
-        return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), e.getMessage());
+        return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), e.getMessage());
     }
 
     /**
@@ -99,7 +99,7 @@ public class GlobalExceptionHandler {
         final String message = e.getConstraintViolations()
                 .stream().map(constraintViolation -> constraintViolation.getPropertyPath() + StringPool.COLON + constraintViolation.getMessage()).collect(Collectors.joining());
         log.error("参数校验异常:{}", message);
-        return BaseResult.fail(ResultCode.PARAM_VALID_ERROR.getCode(), message);
+        return BaseResult.fail(ErrorCode.PARAM_VALID_ERROR.getCode(), message);
     }
 
     /**
@@ -112,7 +112,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = {HttpRequestMethodNotSupportedException.class})
     @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
     public BaseResult<Object> httpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
-        return BaseResult.fail(ResultCode.METHOD_NOT_ALLOWED.getCode(), ResultCode.METHOD_NOT_ALLOWED.getMessage());
+        return BaseResult.fail(ErrorCode.METHOD_NOT_ALLOWED.getCode(), ErrorCode.METHOD_NOT_ALLOWED.getMessage());
     }
 
     /**
@@ -128,7 +128,7 @@ public class GlobalExceptionHandler {
                 .stream().map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .collect(Collectors.joining(","));
         log.error("参数校验异常:{}", message);
-        return BaseResult.fail(ResultCode.PARAM_VALID_ERROR.getCode(), message);
+        return BaseResult.fail(ErrorCode.PARAM_VALID_ERROR.getCode(), message);
     }
 
 
@@ -137,7 +137,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public BaseResult<Object> exceptionHandler(NullPointerException e) {
         log.error("sytem_error", e);
-        return BaseResult.fail(ResultCode.INTERNAL_SERVER_ERROR.getCode(), e.getMessage());
+        return BaseResult.fail(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), e.getMessage());
     }
 
     @ResponseBody
@@ -145,7 +145,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public BaseResult<Object> exceptionHandler(PSQLException e) {
         log.error("sytem_error", e);
-        return BaseResult.fail(ResultCode.INTERNAL_SERVER_ERROR.getCode(), "服务器异常,请联系管理员");
+        return BaseResult.fail(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), "服务器异常,请联系管理员");
     }
 
     @ResponseBody
@@ -153,7 +153,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public BaseResult<Object> exceptionHandler(DataAccessException e) {
         log.error("sytem_error", e);
-        return BaseResult.fail(ResultCode.INTERNAL_SERVER_ERROR.getCode(), "数据异常");
+        return BaseResult.fail(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), "数据异常");
     }
 
     @ResponseBody
@@ -161,7 +161,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public BaseResult<Object> exceptionHandler(IllegalArgumentException e) {
         log.error("sytem_error", e);
-        return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), e.getMessage());
+        return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), e.getMessage());
     }
     /**
      * 异常捕捉
@@ -174,7 +174,7 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public BaseResult<Object> exceptionHandler(Exception e) {
         log.error("sytem_error", e);
-        return BaseResult.fail(ResultCode.INTERNAL_SERVER_ERROR.getCode(), ResultCode.INTERNAL_SERVER_ERROR.getMessage());
+        return BaseResult.fail(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), ErrorCode.INTERNAL_SERVER_ERROR.getMessage());
     }
 
     /**
@@ -186,7 +186,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = NoResourceFoundException.class)
     public BaseResult<Object> noResourceFoundException(NoResourceFoundException exception) {
         log.error("路径异常:{}", exception.getMessage());
-        return BaseResult.fail(ResultCode.NOT_FOUND.getCode(), ResultCode.NOT_FOUND.getMessage());
+        return BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), ErrorCode.NOT_FOUND.getMessage());
     }
 
     /**
@@ -201,6 +201,6 @@ public class GlobalExceptionHandler {
             List<String> list = result.getResolvableErrors().stream().map(MessageSourceResolvable::getDefaultMessage).toList();
             return list.getFirst();
         }).toList();
-        return BaseResult.fail(ResultCode.PARAM_VALID_ERROR.getCode(), String.join(",",collect));
+        return BaseResult.fail(ErrorCode.PARAM_VALID_ERROR.getCode(), String.join(",",collect));
     }
 }

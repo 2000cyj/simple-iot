@@ -2,7 +2,7 @@ package com.github.dingdaoyi.driver.http;
 
 import cn.hutool.json.JSONUtil;
 import com.github.dingdaoyi.core.base.BaseResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.proto.inter.DeviceConnection;
 import com.github.dingdaoyi.proto.model.ExceptionType;
 import com.github.dingdaoyi.proto.model.ProtocolException;
@@ -118,7 +118,7 @@ public class HttpDeviceConnection implements DeviceConnection, Closeable {
     /**
      * 写入失败响应
      */
-    public void writeFail(ResultCode code, String msg) {
+    public void writeFail(ErrorCode code, String msg) {
         writeJson(BaseResult.fail(code, msg));
     }
 

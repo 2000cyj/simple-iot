@@ -1,10 +1,9 @@
 package com.github.dingdaoyi.driver.http;
 
 import com.github.dingdaoyi.core.driver.DeviceKeyParser;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.driver.tcp.core.DeviceKeyParserLoader;
 import com.github.dingdaoyi.iot.IotDataProcessor;
-import com.github.dingdaoyi.model.DTO.DeviceDTO;
 import com.github.dingdaoyi.proto.model.DeviceRequest;
 import com.github.dingdaoyi.service.DeviceService;
 import jakarta.annotation.Resource;
@@ -13,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.Optional;
 
 /**
  * @author dingyunwei
@@ -35,11 +33,11 @@ public class HttpDriverController {
             HttpServletResponse response) {
         DeviceKeyParser parser = DeviceKeyParserLoader.getParser(driverName);
         if (parser == null) {
-            new HttpDeviceConnection("", "", response).writeFail(ResultCode.PARAM_VALID_ERROR, "未找到对应驱动解析器");
+            new HttpDeviceConnection("", "", response).writeFail(ErrorCode.PARAM_VALID_ERROR, "未找到对应驱动解析器");
             return;
         }
         if (!parser.hasDeviceKey(body)) {
-            new HttpDeviceConnection("", "", response).writeFail(ResultCode.PARAM_VALID_ERROR, "无法解析设备编号");
+            new HttpDeviceConnection("", "", response).writeFail(ErrorCode.PARAM_VALID_ERROR, "无法解析设备编号");
             return;
         }
 

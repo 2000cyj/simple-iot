@@ -6,7 +6,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.github.dingdaoyi.config.AuditLog;
 import com.github.dingdaoyi.entity.User;
 import com.github.dingdaoyi.core.base.BaseResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.model.query.ChangePasswordQuery;
 import com.github.dingdaoyi.model.query.LoginQuery;
 import com.github.dingdaoyi.service.UserService;
@@ -38,7 +38,7 @@ public class UserController {
         if (optional.isPresent()) {
             User user = optional.get();
             if (user.isLocked()) {
-                return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), "账号已被锁定");
+                return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), "账号已被锁定");
             }
             if (BCrypt.checkpw(loginQuery.getPassword(), user.getPassword())) {
                 StpUtil.login(user.getId());
@@ -49,9 +49,9 @@ public class UserController {
                 data.put("forceChangePwd", Boolean.TRUE.equals(user.getForceChangePwd()));
                 return BaseResult.success(data);
             }
-            return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), "登录密码错误");
+            return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), "登录密码错误");
         }
-        return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), "账号不存在");
+        return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), "账号不存在");
     }
 
     @PostMapping("changePassword")

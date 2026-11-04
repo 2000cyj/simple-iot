@@ -3,7 +3,7 @@ package com.github.dingdaoyi.controller.iot;
 import com.github.dingdaoyi.entity.Device;
 import com.github.dingdaoyi.core.base.BaseResult;
 import com.github.dingdaoyi.core.base.PageResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.model.query.DeviceAddQuery;
 import com.github.dingdaoyi.model.query.DevicePageQuery;
 import com.github.dingdaoyi.model.query.DeviceUpdateQuery;
@@ -35,14 +35,14 @@ public class DeviceController {
     @Operation(summary = "设备详情")
     public BaseResult<DeviceVo> details(@PathVariable Integer id) {
         Optional<DeviceVo> optional = deviceService.details(id);
-        return optional.map(BaseResult::success).orElse(BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "设备不存在"));
+        return optional.map(BaseResult::success).orElse(BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "设备不存在"));
     }
 
     @PostMapping
     @Operation(summary = "添加设备")
     public BaseResult<Boolean> save(@RequestBody @Valid DeviceAddQuery query) {
         if (!productService.existsById(query.getProductId())) {
-            return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), "产品不存在");
+            return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), "产品不存在");
         }
         return BaseResult.success(deviceService.save(query.toEntity()));
     }
@@ -92,7 +92,7 @@ public class DeviceController {
         try (java.io.OutputStream out = response.getOutputStream()) {
             writer.flush(out, true);
         } catch (java.io.IOException e) {
-            throw new com.github.dingdaoyi.core.exception.BusinessException(ResultCode.BAD_REQUEST, "导出失败");
+            throw new com.github.dingdaoyi.core.exception.BusinessException(ErrorCode.BAD_REQUEST, "导出失败");
         }
     }
 

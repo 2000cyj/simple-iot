@@ -172,7 +172,7 @@ Docker 栈默认会预置一个演示传感器（`demo-sensor-001` / `demo-secre
 ```
 simple-iot/
 ├── iot-server/         # 主服务（REST + MQTT Broker + 规则引擎）
-├── iot-common/         # 公共基类（BaseEntity、ResultCode、分页）
+├── iot-common/         # 公共基类（BaseEntity、ErrorCode、分页）
 ├── iot-driver/         # 系统内置协议驱动
 ├── iot-web/            # Vue 3 管理后台
 ├── doc/                # 文档、SQL 脚本、截图、品牌资产

@@ -1,6 +1,6 @@
 package com.github.dingdaoyi.core.utils;
 
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.BusinessException;
 
 import java.util.Collection;
@@ -18,9 +18,9 @@ public class Assert {
         }
     }
 
-    public static void isTrue(boolean expression, ResultCode resultCode) {
+    public static void isTrue(boolean expression, ErrorCode errorCode) {
         if (!expression) {
-            throw new BusinessException(resultCode);
+            throw new BusinessException(errorCode);
         }
     }
 
@@ -30,9 +30,9 @@ public class Assert {
         }
     }
 
-    public static void notNull(Object object, ResultCode resultCode) {
+    public static void notNull(Object object, ErrorCode errorCode) {
         if (object == null) {
-            throw new BusinessException(resultCode);
+            throw new BusinessException(errorCode);
         }
     }
 

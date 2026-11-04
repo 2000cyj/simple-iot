@@ -1,7 +1,7 @@
 package com.github.dingdaoyi.controller.iot;
 
 import com.github.dingdaoyi.core.base.BaseResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.model.query.ModelPropertyUpdateQuery;
 import com.github.dingdaoyi.model.query.ProductPropertyAddQuery;
 import com.github.dingdaoyi.model.query.StandardPropertyAddQuery;
@@ -41,7 +41,7 @@ public class ModelPropertyController {
     @Operation(summary = "保存标准物模型属性")
     public BaseResult<Boolean> saveStandardProperty(@Valid @RequestBody StandardPropertyAddQuery property) {
         if (modelPropertyService.exists(property.getIdentifier(), property.getProductTypeId())) {
-            return BaseResult.fail(ResultCode.BAD_REQUEST, "标识符已占用!");
+            return BaseResult.fail(ErrorCode.BAD_REQUEST, "标识符已占用!");
         }
         return BaseResult.success(modelPropertyService.saveStandardProperty(property));
     }
@@ -50,7 +50,7 @@ public class ModelPropertyController {
     @Operation(summary = "保存自定义属性")
     public BaseResult<Boolean> saveProductProperty(@RequestBody ProductPropertyAddQuery property) {
         if (modelPropertyService.exists(property.getIdentifier(), property.getProductTypeId(), property.getProductId())) {
-            return BaseResult.fail(ResultCode.BAD_REQUEST, "标识符已占用!");
+            return BaseResult.fail(ErrorCode.BAD_REQUEST, "标识符已占用!");
         }
         return BaseResult.success(modelPropertyService.saveProductProperty(property));
     }

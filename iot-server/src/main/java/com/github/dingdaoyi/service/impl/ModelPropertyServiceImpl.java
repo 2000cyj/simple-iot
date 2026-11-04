@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.github.dingdaoyi.entity.Icon;
 import com.github.dingdaoyi.entity.Product;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.BusinessException;
 import com.github.dingdaoyi.proto.model.DataTypeEnum;
 import com.github.dingdaoyi.model.ToEntity;
@@ -112,7 +112,7 @@ public class ModelPropertyServiceImpl extends ServiceImpl<ModelPropertyMapper, M
                     .toList();
             int result = baseMapper.insertList(propertyList);
             if (result != propertyList.size()) {
-                throw new BusinessException(ResultCode.BAD_REQUEST, "子属性添加失败");
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "子属性添加失败");
             }
         }
     }
@@ -142,7 +142,7 @@ public class ModelPropertyServiceImpl extends ServiceImpl<ModelPropertyMapper, M
     public Boolean saveProductProperty(ProductPropertyAddQuery property) {
         Product product = productService.getById(property.getProductId());
         if (product == null) {
-            throw new BusinessException(ResultCode.PARAM_VALID_ERROR, "请选择正确的产品");
+            throw new BusinessException(ErrorCode.PARAM_VALID_ERROR, "请选择正确的产品");
         }
         ModelProperty entity = property.toEntity();
         boolean result = baseMapper.insert(entity) > 0;
@@ -158,7 +158,7 @@ public class ModelPropertyServiceImpl extends ServiceImpl<ModelPropertyMapper, M
     public Boolean update(ModelPropertyUpdateQuery property) {
         ModelProperty modelProperty = getById(property.getId());
         if (modelProperty == null) {
-            throw new BusinessException(ResultCode.BAD_REQUEST,"属性不存在,无法修改!");
+            throw new BusinessException(ErrorCode.BAD_REQUEST,"属性不存在,无法修改!");
         }
         boolean result = baseMapper.updateById(property.toEntity()) > 0;
         if (result) {

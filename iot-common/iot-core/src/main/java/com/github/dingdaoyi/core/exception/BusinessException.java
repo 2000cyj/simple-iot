@@ -1,6 +1,6 @@
 package com.github.dingdaoyi.core.exception;
 
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import lombok.Getter;
 
 /**
@@ -16,7 +16,7 @@ public class BusinessException extends RuntimeException {
 
     public BusinessException(String message) {
         super(message);
-        this.code = ResultCode.INTERNAL_SERVER_ERROR.getCode();
+        this.code = ErrorCode.INTERNAL_SERVER_ERROR.getCode();
         this.message = message;
     }
 
@@ -26,15 +26,15 @@ public class BusinessException extends RuntimeException {
         this.message = message;
     }
 
-    public BusinessException(ResultCode resultCode) {
-        super(resultCode.getMessage());
-        this.code = resultCode.getCode();
-        this.message = resultCode.getMessage();
+    public BusinessException(ErrorCode errorCode) {
+        super(errorCode.getMessage());
+        this.code = errorCode.getCode();
+        this.message = errorCode.getMessage();
     }
 
-    public BusinessException(ResultCode resultCode, String message) {
+    public BusinessException(ErrorCode errorCode, String message) {
         super(message);
-        this.code = resultCode.getCode();
+        this.code = errorCode.getCode();
         this.message = message;
     }
 }

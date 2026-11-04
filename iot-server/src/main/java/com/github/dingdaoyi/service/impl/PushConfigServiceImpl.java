@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.github.dingdaoyi.controller.iot.dto.PushTestRequest;
 import com.github.dingdaoyi.core.base.PageResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.BusinessException;
 import com.github.dingdaoyi.entity.PushConfig;
 import com.github.dingdaoyi.entity.enu.PushConfigType;
@@ -57,16 +57,16 @@ public class PushConfigServiceImpl extends ServiceImpl<PushConfigMapper, PushCon
             clearHttpConfig(config);
             return;
         }
-        throw new BusinessException(ResultCode.BAD_REQUEST, "配置类型不支持");
+        throw new BusinessException(ErrorCode.BAD_REQUEST, "配置类型不支持");
     }
 
     private void validateHttpConfig(PushConfig config) {
         String httpUrl = StrUtil.trim(config.getHttpUrl());
         if (StrUtil.isBlank(httpUrl)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "HTTP请求URL不能为空");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "HTTP请求URL不能为空");
         }
         if (!StrUtil.startWithIgnoreCase(httpUrl, "http://") && !StrUtil.startWithIgnoreCase(httpUrl, "https://")) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "HTTP请求URL必须以 http:// 或 https:// 开头");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "HTTP请求URL必须以 http:// 或 https:// 开头");
         }
         config.setHttpUrl(httpUrl);
         config.setHttpMethod(StrUtil.blankToDefault(StrUtil.trim(config.getHttpMethod()), "POST").toUpperCase());
@@ -79,16 +79,16 @@ public class PushConfigServiceImpl extends ServiceImpl<PushConfigMapper, PushCon
         String broker = StrUtil.trim(config.getMqttBroker());
         String topic = StrUtil.trim(config.getMqttTopic());
         if (StrUtil.isBlank(broker)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "MQTT Broker地址不能为空");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "MQTT Broker地址不能为空");
         }
         if (!StrUtil.startWithAnyIgnoreCase(broker, "tcp://", "ssl://", "ws://", "wss://")) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "MQTT Broker地址必须以 tcp://、ssl://、ws:// 或 wss:// 开头");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "MQTT Broker地址必须以 tcp://、ssl://、ws:// 或 wss:// 开头");
         }
         if (StrUtil.isBlank(topic)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "MQTT目标Topic不能为空");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "MQTT目标Topic不能为空");
         }
         if (StrUtil.containsAny(topic, '#', '+')) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "MQTT发布Topic不能包含通配符 # 或 +");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "MQTT发布Topic不能包含通配符 # 或 +");
         }
         config.setMqttBroker(broker);
         config.setMqttTopic(topic);

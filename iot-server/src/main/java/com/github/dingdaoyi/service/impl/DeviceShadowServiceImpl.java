@@ -4,7 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.BusinessException;
 import com.github.dingdaoyi.entity.DeviceShadow;
 import com.github.dingdaoyi.mapper.DeviceShadowMapper;
@@ -39,7 +39,7 @@ public class DeviceShadowServiceImpl extends ServiceImpl<DeviceShadowMapper, Dev
                 .set(DeviceShadow::getVersion, oldVersion + 1)
                 .update();
         if (!ok) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "影子版本冲突，请重试");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "影子版本冲突，请重试");
         }
         shadow.setVersion(oldVersion + 1);
         shadow.setDesiredState(existing.toString());
@@ -60,7 +60,7 @@ public class DeviceShadowServiceImpl extends ServiceImpl<DeviceShadowMapper, Dev
                 .set(DeviceShadow::getVersion, oldVersion + 1)
                 .update();
         if (!ok) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "影子版本冲突，请重试");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "影子版本冲突，请重试");
         }
         shadow.setVersion(oldVersion + 1);
         shadow.setReportedState(existing.toString());
@@ -79,7 +79,7 @@ public class DeviceShadowServiceImpl extends ServiceImpl<DeviceShadowMapper, Dev
                     .set(DeviceShadow::getVersion, oldVersion + 1)
                     .update();
             if (!ok) {
-                throw new BusinessException(ResultCode.BAD_REQUEST, "影子版本冲突，请重试");
+                throw new BusinessException(ErrorCode.BAD_REQUEST, "影子版本冲突，请重试");
             }
         }
     }

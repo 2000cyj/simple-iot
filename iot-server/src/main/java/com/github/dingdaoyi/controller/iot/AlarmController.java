@@ -4,7 +4,7 @@ import com.github.dingdaoyi.auth.AuthUtil;
 import com.github.dingdaoyi.config.AuditLog;
 import com.github.dingdaoyi.core.base.BaseResult;
 import com.github.dingdaoyi.core.base.PageResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.entity.Alarm;
 import com.github.dingdaoyi.entity.AlarmComment;
 import com.github.dingdaoyi.entity.enu.AlarmSeverity;
@@ -40,7 +40,7 @@ public class AlarmController {
     public BaseResult<Alarm> details(@PathVariable Integer id) {
         Alarm alarm = alarmService.getById(id);
         if (alarm == null) {
-            return BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "告警不存在");
+            return BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "告警不存在");
         }
         return BaseResult.success(alarm);
     }
@@ -57,7 +57,7 @@ public class AlarmController {
                                             @RequestBody(required = false) Map<String, String> body) {
         Alarm alarm = alarmService.getById(id);
         if (alarm == null) {
-            return BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "告警不存在");
+            return BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "告警不存在");
         }
         alarm.setStatus(AlarmStatus.ACKNOWLEDGED);
         boolean ok = alarmService.updateById(alarm);
@@ -97,7 +97,7 @@ public class AlarmController {
                                          @RequestBody Map<String, String> body) {
         Alarm alarm = alarmService.getById(id);
         if (alarm == null) {
-            return BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "告警不存在");
+            return BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "告警不存在");
         }
         String severity = body.get("severity");
         alarm.setSeverity(AlarmSeverity.valueOf(severity));
@@ -173,7 +173,7 @@ public class AlarmController {
         try (java.io.OutputStream out = response.getOutputStream()) {
             writer.flush(out, true);
         } catch (java.io.IOException e) {
-            throw new com.github.dingdaoyi.core.exception.BusinessException(ResultCode.BAD_REQUEST, "导出失败");
+            throw new com.github.dingdaoyi.core.exception.BusinessException(ErrorCode.BAD_REQUEST, "导出失败");
         }
     }
 }

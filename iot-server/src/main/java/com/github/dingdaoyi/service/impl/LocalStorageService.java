@@ -1,6 +1,6 @@
 package com.github.dingdaoyi.service.impl;
 
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.BusinessException;
 import com.github.dingdaoyi.model.vo.FileMetadata;
 import com.github.dingdaoyi.service.StorageService;
@@ -38,7 +38,7 @@ public class LocalStorageService implements StorageService {
         try {
             Files.copy(file.getInputStream(), path);
         } catch (IOException e) {
-            throw new BusinessException(ResultCode.BAD_REQUEST.getCode(),"文件上传失败");
+            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(),"文件上传失败");
         }
         return fileName;
     }
@@ -74,7 +74,7 @@ public class LocalStorageService implements StorageService {
         try {
             Files.deleteIfExists(paths);
         } catch (IOException e) {
-            throw new BusinessException(ResultCode.BAD_REQUEST.getCode(),"删除文件失败");
+            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(),"删除文件失败");
         }
     }
 }

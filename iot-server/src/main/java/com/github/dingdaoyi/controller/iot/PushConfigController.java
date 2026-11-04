@@ -3,7 +3,7 @@ package com.github.dingdaoyi.controller.iot;
 import com.github.dingdaoyi.controller.iot.dto.PushTestRequest;
 import com.github.dingdaoyi.core.base.BaseResult;
 import com.github.dingdaoyi.core.base.PageResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.entity.PushConfig;
 import com.github.dingdaoyi.model.query.PushConfigAddQuery;
 import com.github.dingdaoyi.model.query.PushConfigPageQuery;
@@ -38,7 +38,7 @@ public class PushConfigController {
     public BaseResult<PushConfigDetailVo> details(@PathVariable Integer id) {
         Optional<PushConfigDetailVo> optional = pushConfigService.details(id);
         return optional.map(BaseResult::success)
-                .orElse(BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "配置不存在"));
+                .orElse(BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "配置不存在"));
     }
 
     @PostMapping

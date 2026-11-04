@@ -1,7 +1,7 @@
 package com.github.dingdaoyi.config;
 
 import com.github.dingdaoyi.core.exception.BusinessException;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,7 +36,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         int current = counter.incrementAndGet();
         if (current > 120) {
             response.setStatus(429);
-            throw new BusinessException(ResultCode.BAD_REQUEST, "请求过于频繁，请稍后再试");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "请求过于频繁，请稍后再试");
         }
         return true;
     }

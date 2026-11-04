@@ -1,6 +1,5 @@
 package com.github.dingdaoyi.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.dingdaoyi.core.model.DeviceBase;
@@ -11,7 +10,7 @@ import com.github.dingdaoyi.model.query.DevicePageQuery;
 import com.github.dingdaoyi.model.vo.DevicePageVo;
 import com.github.dingdaoyi.model.vo.DeviceVo;
 import com.github.dingdaoyi.model.vo.ProductVo;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.BusinessException;
 import com.github.dingdaoyi.entity.DeviceGroupRelation;
 import com.github.dingdaoyi.entity.DeviceShadow;
@@ -116,7 +115,7 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         // 子设备存在则拒绝删除
         long childCount = count(Wrappers.<Device>lambdaQuery().eq(Device::getParentId, deviceId));
         if (childCount > 0) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "存在子设备，无法删除");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "存在子设备，无法删除");
         }
         boolean deleted = super.removeById(id);
         if (deleted) {

@@ -91,7 +91,7 @@ iot-common/iot-core/src/main/java/com/github/dingdaoyi/core/
 ├── driver/                        # Driver interfaces
 │   └── DeviceTransport.java       # Transport driver interface
 ├── enums/                         # Core enumerations
-│   └── ResultCode.java            # API response codes
+│   └── ErrorCode.java             # API response codes
 ├── exception/                     # Core exceptions
 ├── model/                         # Core models (DeviceBase)
 ├── service/                       # Core service interfaces (DeviceProvider)

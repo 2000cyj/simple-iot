@@ -7,7 +7,7 @@ import com.github.dingdaoyi.iot.IotCommandProcessor;
 import com.github.dingdaoyi.iot.model.CommandRequest;
 import com.github.dingdaoyi.iot.model.CommandResponse;
 import com.github.dingdaoyi.iot.proto.ProtocolFactory;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.BusinessException;
 import com.github.dingdaoyi.proto.inter.ProtocolDecoder;
 import com.github.dingdaoyi.proto.model.*;
@@ -91,7 +91,7 @@ public class IotDataProcessorImpl implements IotDataProcessor, IotCommandProcess
         CompletableFuture<CommandResponse> future = new CompletableFuture<>();
         Optional<ProtocolDecoder> decoderOptional = ProtocolFactory.getDecoder(request.getProtoKey());
         if (decoderOptional.isEmpty()) {
-            future.completeExceptionally(new BusinessException(ResultCode.PROTO_NOT_EXIST));
+            future.completeExceptionally(new BusinessException(ErrorCode.PROTO_NOT_EXIST));
             return future;
         }
         ProtocolDecoder protocolDecoder = decoderOptional.get();
@@ -99,7 +99,7 @@ public class IotDataProcessorImpl implements IotDataProcessor, IotCommandProcess
             EncoderMessage encoderMessage = request.toMessage();
             EncoderResult result = protocolDecoder.encode(encoderMessage,tslModel);
             if (result == null) {
-                throw new BusinessException(ResultCode.BAD_REQUEST,"此设备不支持调用此服务，有疑问请联系管理员！");
+                throw new BusinessException(ErrorCode.BAD_REQUEST,"此设备不支持调用此服务，有疑问请联系管理员！");
             }
             //异步事件不需要响应时
             if (result.isNeedReply()) {

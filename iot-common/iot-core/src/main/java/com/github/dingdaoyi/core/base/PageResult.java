@@ -1,8 +1,7 @@
 package com.github.dingdaoyi.core.base;
 
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.Iterator;
@@ -43,7 +42,7 @@ public class PageResult<T> implements Iterable<T>{
         this.total = total;
         this.current = current;
         this.size = size;
-        this.code = ResultCode.SUCCESS.getCode();
+        this.code = ErrorCode.SUCCESS.getCode();
     }
 
     public static <T> PageResult<T> of(List<T> records, Long total, Long current, Long size) {

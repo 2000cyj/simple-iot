@@ -1,7 +1,7 @@
 package com.github.dingdaoyi.core.base;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -35,26 +35,26 @@ public class BaseResult<T> {
      */
     @Schema(description = "是否成功")
     public boolean isSuccess() {
-        return ResultCode.SUCCESS.getCode().equals(code);
+        return ErrorCode.SUCCESS.getCode().equals(code);
     }
 
     public static <T> BaseResult<T> success() {
-        return new BaseResult<>(ResultCode.SUCCESS.getCode(), "操作成功", null);
+        return new BaseResult<>(ErrorCode.SUCCESS.getCode(), "操作成功", null);
     }
 
     public static <T> BaseResult<T> success(T data) {
-        return new BaseResult<>(ResultCode.SUCCESS.getCode(), "操作成功", data);
+        return new BaseResult<>(ErrorCode.SUCCESS.getCode(), "操作成功", data);
     }
 
     public static <T> BaseResult<T> success(String msg, T data) {
-        return new BaseResult<>(ResultCode.SUCCESS.getCode(), msg, data);
+        return new BaseResult<>(ErrorCode.SUCCESS.getCode(), msg, data);
     }
 
     public static <T> BaseResult<T> fail(String msg) {
-        return new BaseResult<>(ResultCode.INTERNAL_SERVER_ERROR.getCode(), msg, null);
+        return new BaseResult<>(ErrorCode.INTERNAL_SERVER_ERROR.getCode(), msg, null);
     }
 
-    public static <T> BaseResult<T> fail(ResultCode code, String msg) {
+    public static <T> BaseResult<T> fail(ErrorCode code, String msg) {
         return new BaseResult<>(code.getCode(), msg, null);
     }
 

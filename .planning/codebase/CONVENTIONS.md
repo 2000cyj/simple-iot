@@ -277,7 +277,7 @@ import { productPageApi, devicePageApi } from '@/api/index.js'
 - Query: `XxxPageQuery`, `XxxAddQuery`, `XxxUpdateQuery`
 - VO: `XxxVo`, `XxxPageVo`
 - DTO: `XxxDTO`
-- Enum: `PascalCase` (e.g., `ResultCode`, `ProtoType`)
+- Enum: `PascalCase` (e.g., `ErrorCode`, `ProtoType`)
 
 **Database Tables:**
 - Prefix: `tb_` (e.g., `tb_device`, `tb_product_type`)
@@ -323,7 +323,7 @@ public class DeviceController {
     public BaseResult<DeviceVo> details(@PathVariable Integer id) {
         Optional<DeviceVo> optional = deviceService.details(id);
         return optional.map(BaseResult::success)
-                       .orElse(BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "设备不存在"));
+                       .orElse(BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "设备不存在"));
     }
 
     @PostMapping
@@ -468,13 +468,13 @@ public interface DeviceMapper extends BaseMapper<Device> {
 ```java
 // Business validation
 if (!productService.existsById(query.getProductId())) {
-    return BaseResult.fail(ResultCode.BAD_REQUEST.getCode(), "产品不存在");
+    return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), "产品不存在");
 }
 
 // Optional handling
 Optional<DeviceVo> optional = deviceService.details(id);
 return optional.map(BaseResult::success)
-               .orElse(BaseResult.fail(ResultCode.NOT_FOUND.getCode(), "设备不存在"));
+               .orElse(BaseResult.fail(ErrorCode.NOT_FOUND.getCode(), "设备不存在"));
 ```
 
 ### Dependency Injection

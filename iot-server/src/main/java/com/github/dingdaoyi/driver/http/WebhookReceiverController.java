@@ -2,7 +2,7 @@ package com.github.dingdaoyi.driver.http;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.github.dingdaoyi.core.base.BaseResult;
-import com.github.dingdaoyi.core.enums.ResultCode;
+import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.entity.Device;
 import com.github.dingdaoyi.entity.Product;
 import com.github.dingdaoyi.entity.WebhookIngress;
@@ -23,7 +23,6 @@ import cn.hutool.json.JSONUtil;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
 /**
  * HTTP Webhook 数据接入端点。
@@ -65,7 +64,7 @@ public class WebhookReceiverController {
                         HttpServletResponse response) throws IOException {
         WebhookIngress config = findByToken(token);
         if (config == null || !Boolean.TRUE.equals(config.getEnabled())) {
-            writeJson(response, BaseResult.fail(ResultCode.UNAUTHORIZED, "无效的接入Token"));
+            writeJson(response, BaseResult.fail(ErrorCode.UNAUTHORIZED, "无效的接入Token"));
             return;
         }
 
@@ -73,7 +72,7 @@ public class WebhookReceiverController {
         String timestamp = request.getHeader("X-Siot-Timestamp");
 
         if (signature == null || timestamp == null) {
-            writeJson(response, BaseResult.fail(ResultCode.UNAUTHORIZED, "缺少签名或时间戳"));
+            writeJson(response, BaseResult.fail(ErrorCode.UNAUTHORIZED, "缺少签名或时间戳"));
             return;
         }
 
@@ -82,11 +81,11 @@ public class WebhookReceiverController {
             long ts = Long.parseLong(timestamp);
             long now = System.currentTimeMillis();
             if (Math.abs(now - ts) > MAX_TIMESTAMP_DRIFT_MS) {
-                writeJson(response, BaseResult.fail(ResultCode.UNAUTHORIZED, "时间戳超出有效范围"));
+                writeJson(response, BaseResult.fail(ErrorCode.UNAUTHORIZED, "时间戳超出有效范围"));
                 return;
             }
         } catch (NumberFormatException e) {
-            writeJson(response, BaseResult.fail(ResultCode.UNAUTHORIZED, "时间戳格式无效"));
+            writeJson(response, BaseResult.fail(ErrorCode.UNAUTHORIZED, "时间戳格式无效"));
             return;
         }
 
@@ -95,19 +94,19 @@ public class WebhookReceiverController {
         String expected = signer.sign(config.getSecret(), timestamp, bodyStr);
         if (!expected.equalsIgnoreCase(signature)) {
             log.warn("Webhook签名验证失败: token={}, name={}", token, config.getName());
-            writeJson(response, BaseResult.fail(ResultCode.UNAUTHORIZED, "签名验证失败"));
+            writeJson(response, BaseResult.fail(ErrorCode.UNAUTHORIZED, "签名验证失败"));
             return;
         }
 
         // 查设备 -> 构建DeviceRequest -> 喂给 messageUp
         Device device = deviceMapper.selectById(config.getDeviceId());
         if (device == null) {
-            writeJson(response, BaseResult.fail(ResultCode.BAD_REQUEST, "设备不存在"));
+            writeJson(response, BaseResult.fail(ErrorCode.BAD_REQUEST, "设备不存在"));
             return;
         }
         Product product = productMapper.selectById(device.getProductId());
         if (product == null) {
-            writeJson(response, BaseResult.fail(ResultCode.BAD_REQUEST, "产品不存在"));
+            writeJson(response, BaseResult.fail(ErrorCode.BAD_REQUEST, "产品不存在"));
             return;
         }
 
@@ -118,7 +117,7 @@ public class WebhookReceiverController {
         try {
             jsonBody = JSONUtil.parseObj(rawBody);
         } catch (Exception e) {
-            writeJson(response, BaseResult.fail(ResultCode.BAD_REQUEST, "请求体不是有效的JSON"));
+            writeJson(response, BaseResult.fail(ErrorCode.BAD_REQUEST, "请求体不是有效的JSON"));
             return;
         }
         for (String identifier : jsonBody.keySet()) {
