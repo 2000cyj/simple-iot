@@ -2,7 +2,7 @@ package com.github.dingdaoyi.controller.system;
 
 import com.github.dingdaoyi.core.base.BaseResult;
 import com.github.dingdaoyi.core.enums.ErrorCode;
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.entity.EmailConfig;
 import com.github.dingdaoyi.service.EmailConfigService;
 import com.github.dingdaoyi.service.impl.EmailNotificationService;
@@ -59,18 +59,18 @@ public class NotificationController {
         if (request.getConfigId() != null) {
             config = emailConfigService.getById(request.getConfigId());
             if (config == null) {
-                throw new BusinessException(ErrorCode.BAD_REQUEST, "邮箱配置不存在");
+                throw new ServiceException(ErrorCode.BAD_REQUEST, "邮箱配置不存在");
             }
         } else {
             Optional<EmailConfig> configOpt = emailConfigService.getDefaultConfig();
             if (configOpt.isEmpty()) {
-                throw new BusinessException(ErrorCode.BAD_REQUEST, "未配置默认邮箱服务");
+                throw new ServiceException(ErrorCode.BAD_REQUEST, "未配置默认邮箱服务");
             }
             config = configOpt.get();
         }
 
         if (!config.isEnabled()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "邮箱配置已禁用");
+            throw new ServiceException(ErrorCode.BAD_REQUEST, "邮箱配置已禁用");
         }
 
         try {
@@ -85,7 +85,7 @@ public class NotificationController {
             mailSender.send(message);
             return BaseResult.success(true);
         } catch (MessagingException e) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "邮件发送失败: " + e.getMessage());
+            throw new ServiceException(ErrorCode.INTERNAL_SERVER_ERROR, "邮件发送失败: " + e.getMessage());
         }
     }
 

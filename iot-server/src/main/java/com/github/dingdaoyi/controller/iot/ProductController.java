@@ -4,7 +4,7 @@ import com.github.dingdaoyi.entity.Product;
 import com.github.dingdaoyi.core.base.BaseResult;
 import com.github.dingdaoyi.core.base.PageResult;
 import com.github.dingdaoyi.core.enums.ErrorCode;
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.model.query.ProductPageQuery;
 import com.github.dingdaoyi.model.vo.ProductPageVo;
 import com.github.dingdaoyi.model.vo.ProductVo;
@@ -74,10 +74,10 @@ public class ProductController {
     @Operation(summary = "删除产品")
     public BaseResult<Boolean> delete(@PathVariable Integer id) {
         if (modelServiceService.existsByProduct(id)) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(), "产品下存在物模型信息, 无法删除");
+            throw new ServiceException(ErrorCode.BAD_REQUEST.getCode(), "产品下存在物模型信息, 无法删除");
         }
         if (modelPropertyService.existsByProduct(id)) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(), "产品下存在物模型信息, 无法删除");
+            throw new ServiceException(ErrorCode.BAD_REQUEST.getCode(), "产品下存在物模型信息, 无法删除");
         }
         return BaseResult.success(productService.removeById(id));
     }

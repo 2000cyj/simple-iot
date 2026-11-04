@@ -182,7 +182,7 @@
 
 **Patterns:**
 - `GlobalExceptionHandler` (`config/base/GlobalExceptionHandler.java`) catches all exceptions
-- `BusinessException` for domain-specific errors with `ErrorCode`
+- `ServiceException` for domain-specific errors with `ErrorCode`
 - `ProtocolException` for protocol parsing errors
 - Controller returns `BaseResult.fail(code, message)` for expected errors
 - Service layer throws exceptions, controller handles transformation

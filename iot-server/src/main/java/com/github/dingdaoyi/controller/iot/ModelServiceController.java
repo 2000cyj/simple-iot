@@ -3,7 +3,7 @@ package com.github.dingdaoyi.controller.iot;
 import cn.hutool.core.collection.CollectionUtil;
 import com.github.dingdaoyi.core.base.BaseResult;
 import com.github.dingdaoyi.core.enums.ErrorCode;
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.model.query.ServiceAddQuery;
 import com.github.dingdaoyi.model.query.ServiceUpdateQuery;
 import com.github.dingdaoyi.model.vo.ModelServiceVO;
@@ -64,7 +64,7 @@ public class ModelServiceController {
     private void validateProperties(ServiceAddQuery modelService) {
         if (CollectionUtil.isNotEmpty(modelService.getInputParamIds())) {
             if (!modelPropertyService.allExists(modelService.getInputParamIds())) {
-                throw new BusinessException(ErrorCode.BAD_REQUEST,"请确保入参id");
+                throw new ServiceException(ErrorCode.BAD_REQUEST,"请确保入参id");
             }
         }
     }

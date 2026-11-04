@@ -173,7 +173,7 @@ public class AlarmController {
         try (java.io.OutputStream out = response.getOutputStream()) {
             writer.flush(out, true);
         } catch (java.io.IOException e) {
-            throw new com.github.dingdaoyi.core.exception.BusinessException(ErrorCode.BAD_REQUEST, "导出失败");
+            throw new com.github.dingdaoyi.core.exception.ServiceException(ErrorCode.BAD_REQUEST, "导出失败");
         }
     }
 }

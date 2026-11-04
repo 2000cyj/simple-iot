@@ -1,7 +1,7 @@
 package com.github.dingdaoyi.service.impl;
 
 import com.github.dingdaoyi.core.enums.ErrorCode;
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.model.vo.FileMetadata;
 import com.github.dingdaoyi.service.StorageService;
 import lombok.extern.slf4j.Slf4j;
@@ -45,14 +45,14 @@ public class S3StorageService implements StorageService {
                 String errorMsg = ex.awsErrorDetails() != null ?
                         ex.awsErrorDetails().errorMessage() : ex.getMessage();
                 log.error("创建存储桶失败: {}", errorMsg);
-                throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(),
+                throw new ServiceException(ErrorCode.BAD_REQUEST.getCode(),
                         "创建存储桶失败: " + errorMsg);
             }
         } catch (S3Exception e) {
             String errorMsg = e.awsErrorDetails() != null ?
                     e.awsErrorDetails().errorMessage() : e.getMessage();
             log.error("连接存储服务失败: {}", errorMsg);
-            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(),
+            throw new ServiceException(ErrorCode.BAD_REQUEST.getCode(),
                     "连接存储服务失败: " + errorMsg);
         }
     }
@@ -83,12 +83,12 @@ public class S3StorageService implements StorageService {
             return fileName;
         } catch (IOException e) {
             log.error("文件读取失败: {}", e.getMessage());
-            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(), "文件上传失败");
+            throw new ServiceException(ErrorCode.BAD_REQUEST.getCode(), "文件上传失败");
         } catch (S3Exception e) {
             String errorMsg = e.awsErrorDetails() != null ?
                     e.awsErrorDetails().errorMessage() : e.getMessage();
             log.error("存储服务上传失败: {}", errorMsg);
-            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(), "文件上传失败");
+            throw new ServiceException(ErrorCode.BAD_REQUEST.getCode(), "文件上传失败");
         }
     }
 
@@ -128,7 +128,7 @@ public class S3StorageService implements StorageService {
             log.info("文件删除成功: {}", path);
         } catch (Exception e) {
             log.error("删除文件失败: {}", path, e);
-            throw new BusinessException(ErrorCode.BAD_REQUEST.getCode(), "删除文件失败");
+            throw new ServiceException(ErrorCode.BAD_REQUEST.getCode(), "删除文件失败");
         }
     }
 }

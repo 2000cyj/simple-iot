@@ -1,7 +1,7 @@
 package com.github.dingdaoyi.service.impl;
 
 import com.github.dingdaoyi.core.enums.ErrorCode;
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.service.ResourceUseService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
@@ -34,7 +34,7 @@ public class IconServiceImpl extends ServiceImpl<IconMapper, Icon> implements Ic
         }
         for (ResourceUseService<Icon> iconUseService : iconUseServices) {
             if (iconUseService.isUsed(icon)) {
-                throw new BusinessException(ErrorCode.BAD_REQUEST,"图标在"+iconUseService.userTarget()+"中已使用,无法删除!");
+                throw new ServiceException(ErrorCode.BAD_REQUEST,"图标在"+iconUseService.userTarget()+"中已使用,无法删除!");
             }
         }
         return super.removeById(id);

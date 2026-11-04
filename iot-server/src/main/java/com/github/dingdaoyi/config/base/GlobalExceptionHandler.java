@@ -3,7 +3,7 @@ package com.github.dingdaoyi.config.base;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.github.dingdaoyi.core.base.BaseResult;
 import com.github.dingdaoyi.core.enums.ErrorCode;
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.proto.model.ProtocolException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -58,8 +58,8 @@ public class GlobalExceptionHandler {
 
 
     @ResponseBody
-    @ExceptionHandler(value = BusinessException.class)
-    public BaseResult<Object> businessException(BusinessException e) {
+    @ExceptionHandler(value = ServiceException.class)
+    public BaseResult<Object> serviceException(ServiceException e) {
         return BaseResult.fail(e.getCode(), e.getMessage());
     }
 

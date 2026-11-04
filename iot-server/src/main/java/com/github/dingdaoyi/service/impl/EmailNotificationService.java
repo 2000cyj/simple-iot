@@ -4,7 +4,7 @@ import cn.hutool.json.JSONUtil;
 import com.github.dingdaoyi.entity.EmailConfig;
 import com.github.dingdaoyi.model.enu.NotifyType;
 import com.github.dingdaoyi.core.enums.ErrorCode;
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.service.EmailConfigService;
 import com.github.dingdaoyi.service.NotificationService;
 import freemarker.template.Configuration;
@@ -108,7 +108,7 @@ public class EmailNotificationService implements NotificationService {
             template.process(templateData, writer);
             return writer.toString();
         } catch (IOException | TemplateException e) {
-            throw new BusinessException(ErrorCode.NPE_ERROR, "生成邮件内容失败");
+            throw new ServiceException(ErrorCode.NPE_ERROR, "生成邮件内容失败");
         }
     }
 }

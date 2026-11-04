@@ -1,6 +1,6 @@
 package com.github.dingdaoyi.service;
 
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.entity.Device;
 import com.github.dingdaoyi.entity.DeviceGroupRelation;
 import com.github.dingdaoyi.entity.DeviceShadow;
@@ -52,7 +52,7 @@ class DeviceServiceTest {
         when(deviceMapper.selectCount(any())).thenReturn(1L);
 
         assertThatThrownBy(() -> deviceService.removeById(1))
-                .isInstanceOf(BusinessException.class)
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("存在子设备，无法删除");
 
         // 不应执行删除

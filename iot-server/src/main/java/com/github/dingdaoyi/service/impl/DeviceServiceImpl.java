@@ -11,7 +11,7 @@ import com.github.dingdaoyi.model.vo.DevicePageVo;
 import com.github.dingdaoyi.model.vo.DeviceVo;
 import com.github.dingdaoyi.model.vo.ProductVo;
 import com.github.dingdaoyi.core.enums.ErrorCode;
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.entity.DeviceGroupRelation;
 import com.github.dingdaoyi.entity.DeviceShadow;
 import com.github.dingdaoyi.mapper.DeviceGroupRelationMapper;
@@ -115,7 +115,7 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device> impleme
         // 子设备存在则拒绝删除
         long childCount = count(Wrappers.<Device>lambdaQuery().eq(Device::getParentId, deviceId));
         if (childCount > 0) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "存在子设备，无法删除");
+            throw new ServiceException(ErrorCode.BAD_REQUEST, "存在子设备，无法删除");
         }
         boolean deleted = super.removeById(id);
         if (deleted) {

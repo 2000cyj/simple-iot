@@ -1,6 +1,6 @@
 package com.github.dingdaoyi.service;
 
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.entity.PushConfig;
 import com.github.dingdaoyi.entity.enu.PushConfigType;
 import com.github.dingdaoyi.mapper.PushConfigMapper;
@@ -44,7 +44,7 @@ class PushConfigServiceTest {
         config.setHttpUrl("   ");
 
         assertThatThrownBy(() -> pushConfigService.save(config))
-                .isInstanceOf(BusinessException.class)
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("HTTP请求URL不能为空");
     }
 
@@ -54,7 +54,7 @@ class PushConfigServiceTest {
         config.setHttpUrl("ftp://example.com/callback");
 
         assertThatThrownBy(() -> pushConfigService.save(config))
-                .isInstanceOf(BusinessException.class)
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("HTTP请求URL必须以 http:// 或 https:// 开头");
     }
 
@@ -91,7 +91,7 @@ class PushConfigServiceTest {
         config.setMqttTopic("device/+/up");
 
         assertThatThrownBy(() -> pushConfigService.updateById(config))
-                .isInstanceOf(BusinessException.class)
+                .isInstanceOf(ServiceException.class)
                 .hasMessageContaining("MQTT发布Topic不能包含通配符");
     }
 

@@ -6,7 +6,7 @@ import com.github.dingdaoyi.config.base.IotConfigProperties;
 import com.github.dingdaoyi.iot.DataProcessor;
 import com.github.dingdaoyi.model.DTO.DeviceDTO;
 import com.github.dingdaoyi.core.enums.ErrorCode;
-import com.github.dingdaoyi.core.exception.BusinessException;
+import com.github.dingdaoyi.core.exception.ServiceException;
 import com.github.dingdaoyi.core.base.PageResult;
 import com.github.dingdaoyi.model.query.DeviceDataQuery;
 import com.github.dingdaoyi.model.query.DeviceEventDataVo;
@@ -256,7 +256,7 @@ public class InfluxDataProcessor implements DataProcessor, DeviceDataService {
                     return PageResult.of(List.of(), 0L, (long) page, (long) size);
                 }
                 log.error("count 查询出错:{}", e.getMessage());
-                throw new BusinessException(ErrorCode.BAD_REQUEST, "请求参数错误!");
+                throw new ServiceException(ErrorCode.BAD_REQUEST, "请求参数错误!");
             }
         }
 
@@ -279,7 +279,7 @@ public class InfluxDataProcessor implements DataProcessor, DeviceDataService {
                 return PageResult.of(List.of(), 0L, (long) page, (long) size);
             }
             log.error("查询出错:{}", e.getMessage());
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "请求参数错误!");
+            throw new ServiceException(ErrorCode.BAD_REQUEST, "请求参数错误!");
         }
     }
 

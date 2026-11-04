@@ -227,7 +227,7 @@ void testParseNumber() {
 ```java
 @Test
 void testExceptionHandling() {
-    Exception exception = assertThrows(BusinessException.class, () -> {
+    Exception exception = assertThrows(ServiceException.class, () -> {
         service.methodThatThrows();
     });
     assertEquals("Expected message", exception.getMessage());
