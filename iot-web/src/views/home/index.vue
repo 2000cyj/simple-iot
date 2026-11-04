@@ -18,6 +18,7 @@ import { useRouter } from 'vue-router'
 import { getDashboardStatistics } from '@/api/dashboard'
 import { alarmPageApi, alarmStatisticsApi, devicePageApi } from '@/api/index.js'
 import AlarmDetailDialog from '@/components/AlarmDetailDialog.vue'
+import { normalizePage } from '@/utils/page.js'
 
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -110,7 +111,8 @@ async function loadRecentDevices() {
   devicesLoading.value = true
   try {
     const res = await devicePageApi({ page: 1, size: 5 })
-    recentDevices.value = res.data?.records || res.data || []
+    // 分页接口：改造后 res.data 为 { records, total, ... } 对象，用 normalizePage 统一兼容
+    recentDevices.value = normalizePage(res).records
   }
   catch (e) {
     console.error(t('home.failed_load_devices'), e)
@@ -129,7 +131,7 @@ async function loadAlerts() {
       size: 5,
       status: 'ACTIVE',
     })
-    const records = res.data?.records || res.data || []
+    const records = normalizePage(res).records
     alerts.value = records.map(alarm => ({
       ...alarm,
       device: alarm.deviceName || alarm.deviceKey || t('device.unknown_device'),

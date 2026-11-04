@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { normalizePage } from '@/utils/page.js'
 
 const props = defineProps({
   // 新风格：数据数组
@@ -154,7 +155,7 @@ async function fetchData() {
       page: innerPage.value,
       size: innerSize.value,
     })
-    innerData.value = res.data || res.list || []
+    innerData.value = normalizePage(res).records
   }
   catch (e) {
     console.error('IotTable fetchData error:', e)

@@ -1,5 +1,6 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { reactive, ref } from 'vue'
+import { normalizePage } from '@/utils/page.js'
 
 export function useTable(options = {}) {
   const {
@@ -39,11 +40,12 @@ export function useTable(options = {}) {
       // 添加时间戳防止 GET 请求缓存
       const queryParams = { ...params, _t: Date.now() }
       const res = await fetchApi(queryParams)
-      if (res && res.data) {
-        // 后端 PageResult 格式: {data: [...], total: 1, current: 1, size: 20, code: 200}
-        tableData.value = res.data
-        total.value = res.total || 0
-      }
+      // 后端分页接口返回 BaseResult<PageResult>：{code, msg, success, data: {records, total, current, size}}
+      // 后端列表接口返回 BaseResult<List>：{code, msg, success, data: [...]}
+      // 两种形态的 data 结构不同，统一用 normalizePage 归一化后再赋值
+      const { records, total: totalCount } = normalizePage(res)
+      tableData.value = records
+      total.value = totalCount
     }
     catch (error) {
       console.error('获取数据失败:', error)

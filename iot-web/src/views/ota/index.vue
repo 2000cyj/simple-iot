@@ -1,12 +1,13 @@
 <script setup>
+import { Refresh, Upload, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { deviceGroupTreeApi } from '@/api/deviceGroup'
 import { deviceListApi, productListApi, productTypeListApi } from '@/api/index'
 import { firmwareDeleteApi, firmwareListApi, firmwarePublishApi, firmwareUploadApi, otaTaskCreateApi, otaTaskGetApi, otaTaskListApi } from '@/api/ota'
-import PageHeader from '@/components/PageHeader.vue'
 import IotTable from '@/components/IotTable.vue'
-import { Upload, UploadFilled, Refresh } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
+import { normalizePage } from '@/utils/page.js'
 
 const activeTab = ref('firmware')
 const loading = ref(false)
@@ -58,7 +59,10 @@ async function loadGroups() {
 
 async function loadDevices() {
   const res = await deviceListApi({ page: 1, size: 9999 })
-  devices.value = res.data?.records || []
+  // 存量 bug 修复：deviceListApi 走 GET /device/list，返回 BaseResult<List<Device>>，
+  // res.data 是数组、没有 records 字段，原写法 res.data?.records 恒为 undefined，
+  // 导致设备下拉恒为空。改用 normalizePage 统一兼容数组与分页对象两种形态。
+  devices.value = normalizePage(res).records
 }
 
 function onUploadFile(file) {

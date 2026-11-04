@@ -20,6 +20,7 @@ import VChart from 'vue-echarts'
 import { fetchAlarmPage, fetchLatestData, fetchMetric, fetchDeviceList } from '@/api/dashboard'
 import { useAccountStore } from '@/store/modules/account'
 import IotTable from '@/components/IotTable.vue'
+import { normalizePage } from '@/utils/page.js'
 
 // ponytail: single WS connection shared by all widgets on the page.
 // In-memory ref, no reconnect logic. If WS fails, 30s polling still runs.
@@ -88,11 +89,11 @@ async function loadData() {
     }
     else if (type === 'device-grid') {
       const res = await fetchDeviceList({ productId: cfg.productId, page: 1, size: 200 })
-      gridDevices.value = res?.data?.records || res?.data || []
+      gridDevices.value = normalizePage(res).records
     }
     else if (type === 'alarm-list') {
       const res = await fetchAlarmPage({ page: 1, size: 10, severity: cfg.severity })
-      alarmList.value = res?.data?.records || res?.data || []
+      alarmList.value = normalizePage(res).records
     }
     else {
       const now = dayjs()

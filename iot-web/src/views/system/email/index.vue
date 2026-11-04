@@ -1,4 +1,5 @@
 <script setup>
+import { Message, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -11,9 +12,9 @@ import {
   updateEmailConfig,
   updateEmailConfigStatus,
 } from '@/api/email'
-import PageHeader from '@/components/PageHeader.vue'
 import IotTable from '@/components/IotTable.vue'
-import { Message, Plus } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
+import { normalizePage } from '@/utils/page.js'
 
 const { t } = useI18n()
 const listLoading = ref(true)
@@ -79,7 +80,8 @@ async function getList() {
       page: 0,
       size: 100,
     })
-    list.value = response.data
+    // POST /email-config/page 是分页接口，改造后 response.data 为 { records, total, ... } 对象
+    list.value = normalizePage(response).records
   }
   finally {
     listLoading.value = false
