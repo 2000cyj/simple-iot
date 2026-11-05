@@ -77,7 +77,7 @@
                 and dvs.device_key like CONCAT('%', #{query.deviceKey}::text, '%')
             </if>
             <if test="query.parentId != null">
-                and dvs.parentid = #{query.parentId}
+                and dvs.parent_id = #{query.parentId}
             </if>
         </where>
     </select>
