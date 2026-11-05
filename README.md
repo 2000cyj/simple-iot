@@ -79,7 +79,7 @@ Then open:
 
 | Service | URL | Default credentials |
 |---------|-----|--------------------|
-| Web UI | http://localhost | `admin` / `123456` |
+| Web UI | http://localhost | `admin` / `admin` |
 | API docs | http://localhost:5010/iot/doc.html | — |
 | MQTT broker | `mqtt://localhost:1883` | — |
 | MQTT WebSocket | `ws://localhost:8083/mqtt` | — |

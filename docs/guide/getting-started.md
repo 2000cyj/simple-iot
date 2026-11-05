@@ -39,7 +39,7 @@ Open <http://localhost> and use the default account:
 
 ```
 username: admin
-password: 123456
+password: admin
 ```
 
 > **Change this password before exposing the stack to a public network.**

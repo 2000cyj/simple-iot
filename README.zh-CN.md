@@ -72,7 +72,7 @@ chmod +x deploy.sh
 
 | 服务 | 地址 | 默认账号 |
 |---------|-----|--------------------|
-| 前端 | http://localhost | `admin` / `123456` |
+| 前端 | http://localhost | `admin` / `admin` |
 | API 文档 | http://localhost:5010/iot/doc.html | — |
 | MQTT | `mqtt://localhost:1883` | — |
 | MQTT WebSocket | `ws://localhost:8083/mqtt` | — |

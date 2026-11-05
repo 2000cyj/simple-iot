@@ -22,9 +22,9 @@
 |---|---|---|
 | `admin` | `123456` | Full admin access — please be a polite guest |
 
-> ⚠️ **This account has full admin permissions.** It's the same default
-> `admin / 123456` you get from a fresh self-deploy, so the demo can show every
-> feature. **Please be kind to other visitors:**
+> ⚠️ **This account has full admin permissions.** The demo runs with the
+> same default account as a fresh self-deploy, so every feature is visible.
+> **Please be kind to other visitors:**
 >
 > - Don't change the password (you'll lock everyone else out — but the demo
 >   resets nightly at 03:00 UTC+8)
@@ -63,7 +63,7 @@ cp .env.example .env
 ./deploy.sh deploy
 ```
 
-Open `http://localhost`, log in with `admin / 123456` (please change this
+Open `http://localhost`, log in with `admin / admin` (please change this
 before exposing it to the internet!), and you have a full read-write platform
 — no demo limits, no shared state, no nightly reset.
 

@@ -91,7 +91,7 @@ INFLUXDB_URL=http://172.17.0.1:8181
 ## Default credentials
 
 ```
-admin / 123456
+admin / admin
 ```
 
 > **Change it before exposing the stack to a public network.**

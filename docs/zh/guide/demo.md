@@ -57,7 +57,7 @@ cp .env.example .env
 ./deploy.sh deploy
 ```
 
-打开 `http://localhost`，用 `admin / 123456` 登录（**外网部署前请务必改密码！**），
+打开 `http://localhost`，用 `admin / admin` 登录（**外网部署前请务必改密码！**），
 就是完整的读写功能，没有演示限制，没有共享数据，也不会每晚被清。
 
 ## 反馈问题
