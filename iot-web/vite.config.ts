@@ -57,7 +57,7 @@ export default defineConfig(() => {
     },
     resolve: {
       alias,
-      extensions: ['.js', '.jsx', '.json', '.vue', '.css', '.scss'],
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.json', '.vue', '.css', '.scss'],
     },
     server: {
       host: '0.0.0.0',
