@@ -1,8 +1,8 @@
 import { colord } from 'colord'
 import { kebabCase } from 'lodash'
 import { defineStore } from 'pinia'
-import { nextTick } from 'vue'
-import { getItem, setItem } from '@/utils/storage' // getItem和setItem是封装的操作localStorage的方法
+import { nextTick, ref } from 'vue'
+import { getItem, setItem } from '@/utils/storage'
 
 const themeKey = 'theme'
 const key = 'primary'
@@ -45,61 +45,58 @@ function addThemeCssVarsToHtml(themeVars: Record<string, string>): void {
   document.documentElement.style.cssText += styleStr
 }
 
-export const useThemeStore = defineStore('theme', {
-  state: (): { isDark: boolean, themeJson: ThemeConfig } => ({
-    isDark: getItem('vueuse-color-scheme') === true || false,
-    themeJson: (getItem(themeKey) || defaultConfig) as ThemeConfig,
-  }),
-  getters: {},
-  actions: {
-    /* 设置主题模式 */
-    setDarkModel(model: boolean) {
-      nextTick(() => {
-        this.isDark = model
-        if (this.isDark) {
-          document.documentElement.classList.add('dark')
-        }
-        else {
-          document.documentElement.classList.remove('dark')
-        }
-        setItem('vueuse-color-scheme', this.isDark)
-      })
-    },
-    /* 切换主题模式 */
-    toogleDarkModel() {
-      if (this.isDark) {
-        this.setDarkModel(false)
-      }
-      else {
-        this.setDarkModel(true)
-      }
-    },
-    /* 设置系统主题 */
-    changeTheme(colorVal: string) {
-      const el = document.documentElement
-      el.style.setProperty(`--el-color-${key}`, colorVal)
+export const useThemeStore = defineStore('theme', () => {
+  const isDark = ref<boolean>(getItem('vueuse-color-scheme') === true || false)
+  const themeJson = ref<ThemeConfig>((getItem(themeKey) || defaultConfig) as ThemeConfig)
 
-      const resData: Record<string, string> = {
-        elColorPrimary: colorVal,
-      }
+  function setDarkModel(model: boolean): void {
+    nextTick(() => {
+      isDark.value = model
+      if (isDark.value)
+        document.documentElement.classList.add('dark')
+      else
+        document.documentElement.classList.remove('dark')
+      setItem('vueuse-color-scheme', isDark.value)
+    })
+  }
 
-      for (let i = 1; i <= 9; i++) {
-        el.style.setProperty(`--el-color-${key}-light-${i}`, colord(colorVal).lighten(i / 10).toHex())
-        el.style.setProperty(`--el-color-${key}-dark-${i}`, colord(colorVal).darken(i / 10).toHex())
+  function toogleDarkModel(): void {
+    setDarkModel(!isDark.value)
+  }
 
-        resData[`elColorPrimaryLight${i}`] = colord(colorVal).lighten(i / 10).toHex()
-        resData[`elColorPrimaryDark${i}`] = colord(colorVal).darken(i / 10).toHex()
-      }
-      addThemeCssVarsToHtml(resData)
-      this.themeJson.elColorPrimary = colorVal
+  function changeTheme(colorVal: string): void {
+    const el = document.documentElement
+    el.style.setProperty(`--el-color-${key}`, colorVal)
 
-      setItem(themeKey, this.themeJson)
-    },
-    /* 设置侧边栏主题 */
-    changeSliderTheme(val: string) {
-      document.documentElement.style.cssText += `--dw-slider-active-bg:${val}`
-      this.themeJson.dwSliderActiveBg = val
-      setItem(themeKey, this.themeJson)
-    },
-  },
+    const resData: Record<string, string> = {
+      elColorPrimary: colorVal,
+    }
+
+    for (let i = 1; i <= 9; i++) {
+      el.style.setProperty(`--el-color-${key}-light-${i}`, colord(colorVal).lighten(i / 10).toHex())
+      el.style.setProperty(`--el-color-${key}-dark-${i}`, colord(colorVal).darken(i / 10).toHex())
+
+      resData[`elColorPrimaryLight${i}`] = colord(colorVal).lighten(i / 10).toHex()
+      resData[`elColorPrimaryDark${i}`] = colord(colorVal).darken(i / 10).toHex()
+    }
+    addThemeCssVarsToHtml(resData)
+    themeJson.value.elColorPrimary = colorVal
+
+    setItem(themeKey, themeJson.value)
+  }
+
+  function changeSliderTheme(val: string): void {
+    document.documentElement.style.cssText += `--dw-slider-active-bg:${val}`
+    themeJson.value.dwSliderActiveBg = val
+    setItem(themeKey, themeJson.value)
+  }
+
+  return {
+    isDark,
+    themeJson,
+    setDarkModel,
+    toogleDarkModel,
+    changeTheme,
+    changeSliderTheme,
+  }
 })

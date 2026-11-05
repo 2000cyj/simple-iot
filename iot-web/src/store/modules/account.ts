@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { getItem, removeItem, setItem } from '@/utils/storage' // getItem和setItem是封装的操作localStorage的方法
+import { ref } from 'vue'
+import { getItem, removeItem, setItem } from '@/utils/storage'
 
 export const TOKEN = 'VEA-TOKEN'
 
@@ -40,23 +41,27 @@ export interface AccountState {
   menuData: MenuNode[]
 }
 
-export const useAccountStore = defineStore('account', {
-  state: (): AccountState => ({
-    authorization: getItem(TOKEN) as Authorization | null,
-    userinfo: null,
-    menuData: [], // 树列表
-  }),
-  getters: {},
-  actions: {
-    setToken(data: Authorization) {
-      this.authorization = data
-      // 保存到localStorage
-      setItem(TOKEN, data)
-    },
-    clearToken() {
-      this.authorization = {}
-      this.userinfo = null
-      removeItem(TOKEN)
-    },
-  },
+export const useAccountStore = defineStore('account', () => {
+  const authorization = ref<Authorization | null>(getItem(TOKEN) as Authorization | null)
+  const userinfo = ref<UserInfo | null>(null)
+  const menuData = ref<MenuNode[]>([])
+
+  function setToken(data: Authorization): void {
+    authorization.value = data
+    setItem(TOKEN, data)
+  }
+
+  function clearToken(): void {
+    authorization.value = {}
+    userinfo.value = null
+    removeItem(TOKEN)
+  }
+
+  return {
+    authorization,
+    userinfo,
+    menuData,
+    setToken,
+    clearToken,
+  }
 })
