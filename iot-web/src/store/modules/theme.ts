@@ -7,7 +7,20 @@ import { getItem, setItem } from '@/utils/storage' // getItem和setItem是封装
 const themeKey = 'theme'
 const key = 'primary'
 
-function readBrandPrimary() {
+/**
+ * 主题配置。
+ *
+ * elColorPrimary 为主色，dwSliderActiveBg 为侧边栏激活态背景色；
+ * changeTheme 生成的明暗梯度变量（elColorPrimaryLight1~9 / Dark1~9）
+ * 只写入 CSS 变量，持久化时仍以本接口的字段为准，故用索引签名兜底。
+ */
+export interface ThemeConfig {
+  elColorPrimary: string
+  dwSliderActiveBg: string
+  [key: string]: string | undefined
+}
+
+function readBrandPrimary(): string {
   if (typeof window === 'undefined' || !document?.documentElement)
     return '#6366f1'
   const value = getComputedStyle(document.documentElement)
@@ -16,32 +29,31 @@ function readBrandPrimary() {
   return value || '#6366f1'
 }
 
-const defaultConfig = {
+const defaultConfig: ThemeConfig = {
   elColorPrimary: readBrandPrimary(),
   dwSliderActiveBg: '#465D83',
 }
 
 /** 添加css vars至html */
-function addThemeCssVarsToHtml(themeVars) {
+function addThemeCssVarsToHtml(themeVars: Record<string, string>): void {
   const keys = Object.keys(themeVars)
-  const style = []
-  keys.forEach((key) => {
-    style.push(`--${kebabCase(key)}: ${themeVars[key]}`)
+  const style: string[] = []
+  keys.forEach((cssKey) => {
+    style.push(`--${kebabCase(cssKey)}: ${themeVars[cssKey]}`)
   })
   const styleStr = style.join(';')
   document.documentElement.style.cssText += styleStr
 }
 
-export const useThemeStore = defineStore({
-  id: 'theme',
-  state: () => ({
+export const useThemeStore = defineStore('theme', {
+  state: (): { isDark: boolean, themeJson: ThemeConfig } => ({
     isDark: getItem('vueuse-color-scheme') === true || false,
-    themeJson: getItem(themeKey) || defaultConfig,
+    themeJson: (getItem(themeKey) || defaultConfig) as ThemeConfig,
   }),
   getters: {},
   actions: {
     /* 设置主题模式 */
-    setDarkModel(model) {
+    setDarkModel(model: boolean) {
       nextTick(() => {
         this.isDark = model
         if (this.isDark) {
@@ -63,11 +75,11 @@ export const useThemeStore = defineStore({
       }
     },
     /* 设置系统主题 */
-    changeTheme(colorVal) {
+    changeTheme(colorVal: string) {
       const el = document.documentElement
       el.style.setProperty(`--el-color-${key}`, colorVal)
 
-      const resData = {
+      const resData: Record<string, string> = {
         elColorPrimary: colorVal,
       }
 
@@ -75,10 +87,8 @@ export const useThemeStore = defineStore({
         el.style.setProperty(`--el-color-${key}-light-${i}`, colord(colorVal).lighten(i / 10).toHex())
         el.style.setProperty(`--el-color-${key}-dark-${i}`, colord(colorVal).darken(i / 10).toHex())
 
-        const variable1 = `elColorPrimaryLight${i}`
-        const variable2 = `elColorPrimaryDark${i}`
-        resData[variable1] = colord(colorVal).lighten(i / 10).toHex()
-        resData[variable2] = colord(colorVal).darken(i / 10).toHex()
+        resData[`elColorPrimaryLight${i}`] = colord(colorVal).lighten(i / 10).toHex()
+        resData[`elColorPrimaryDark${i}`] = colord(colorVal).darken(i / 10).toHex()
       }
       addThemeCssVarsToHtml(resData)
       this.themeJson.elColorPrimary = colorVal
@@ -86,7 +96,7 @@ export const useThemeStore = defineStore({
       setItem(themeKey, this.themeJson)
     },
     /* 设置侧边栏主题 */
-    changeSliderTheme(val) {
+    changeSliderTheme(val: string) {
       document.documentElement.style.cssText += `--dw-slider-active-bg:${val}`
       this.themeJson.dwSliderActiveBg = val
       setItem(themeKey, this.themeJson)
