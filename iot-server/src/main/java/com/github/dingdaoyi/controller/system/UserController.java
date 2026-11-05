@@ -1,8 +1,9 @@
 package com.github.dingdaoyi.controller.system;
 
-import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.stp.SaTokenInfo;
 import cn.dev33.satoken.stp.StpUtil;
+import cn.hutool.crypto.digest.BCrypt;
+import com.github.dingdaoyi.auth.AuthUtil;
 import com.github.dingdaoyi.config.AuditLog;
 import com.github.dingdaoyi.entity.User;
 import com.github.dingdaoyi.core.base.BaseResult;
@@ -42,7 +43,7 @@ public class UserController {
             }
             if (BCrypt.checkpw(loginQuery.getPassword(), user.getPassword())) {
                 StpUtil.login(user.getId());
-                StpUtil.getSession().set("user", user);
+                StpUtil.getSession().set(AuthUtil.USER_SESSION_KEY, user);
                 SaTokenInfo tokenInfo = StpUtil.getTokenInfo();
                 Map<String, Object> data = new HashMap<>();
                 data.put("tokenInfo", tokenInfo);

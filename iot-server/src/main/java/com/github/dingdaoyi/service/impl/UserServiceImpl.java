@@ -1,6 +1,6 @@
 package com.github.dingdaoyi.service.impl;
 
-import cn.dev33.satoken.secure.BCrypt;
+import cn.hutool.crypto.digest.BCrypt;
 import com.github.dingdaoyi.core.enums.ErrorCode;
 import com.github.dingdaoyi.core.exception.ServiceException;
 import org.springframework.stereotype.Service;

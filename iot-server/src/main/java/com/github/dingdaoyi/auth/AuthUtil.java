@@ -11,7 +11,7 @@ import java.util.Optional;
  */
 public class AuthUtil {
 
-    private static final String USER_SESSION_KEY = "user";
+    public static final String USER_SESSION_KEY = "user";
 
     private AuthUtil() {}
 
