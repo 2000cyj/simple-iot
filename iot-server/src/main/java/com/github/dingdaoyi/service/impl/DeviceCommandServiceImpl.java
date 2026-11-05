@@ -6,6 +6,8 @@ import com.github.dingdaoyi.mapper.DeviceCommandMapper;
 import com.github.dingdaoyi.entity.DeviceCommand;
 import com.github.dingdaoyi.service.DeviceCommandService;
 /**
+ * 设备指令服务实现
+ *
  * @author dingyunwei
  */
 @Service

@@ -8,6 +8,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * 设备分组关联实体
+ */
 @Data
 @TableName("tb_device_group_relation")
 public class DeviceGroupRelation {

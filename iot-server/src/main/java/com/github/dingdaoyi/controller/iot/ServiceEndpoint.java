@@ -13,8 +13,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 /**
+ * 设备服务调用入口
+ *
  * @author dwx
- * @date 2021/6/1 0001
  */
 @RestController
 @RequestMapping("service")

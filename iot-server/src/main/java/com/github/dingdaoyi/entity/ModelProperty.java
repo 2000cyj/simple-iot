@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 物模型属性实体
+ *
  * @author dingyunwei
  */
 @Schema

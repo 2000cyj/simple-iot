@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
+ * 设备控制器
+ *
  * @author dingyunwei
  */
 @AllArgsConstructor

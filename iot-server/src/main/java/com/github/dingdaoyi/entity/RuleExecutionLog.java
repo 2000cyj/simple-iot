@@ -12,6 +12,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 规则执行日志实体
+ */
 @Data
 @TableName(value = "tb_rule_execution_log", autoResultMap = true)
 @Schema(description = "规则链执行日志")

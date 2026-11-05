@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 import org.tio.core.ChannelContext;
 
 /**
+ * MQTT 连接状态监听
+ *
  * @author dingyunwei
  */
 @Slf4j

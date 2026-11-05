@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
+ * 通用状态枚举
+ *
  * @author dingyunwei
  */
-
 @Getter
 public enum StatusEnum {
     ENABLED(1),

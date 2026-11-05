@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
+ * 物模型属性控制器
+ *
  * @author dingyunwei
  */
 @RestController

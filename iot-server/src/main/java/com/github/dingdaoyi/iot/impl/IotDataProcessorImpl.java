@@ -25,6 +25,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 /**
+ * IoT 数据处理实现
+ *
  * @author dingyunwei
  */
 @Service

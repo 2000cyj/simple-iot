@@ -7,6 +7,9 @@ import com.github.dingdaoyi.core.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * 推送日志实体
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("tb_push_log")

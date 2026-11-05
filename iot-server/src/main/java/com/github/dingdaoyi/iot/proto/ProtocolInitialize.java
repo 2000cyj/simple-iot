@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Map;
 
 
+/**
+ * 协议初始化接口
+ */
 public interface ProtocolInitialize {
     /**
      * 初始化

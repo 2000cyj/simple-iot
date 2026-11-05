@@ -3,6 +3,9 @@ package com.github.dingdaoyi.entity.enu;
 import com.baomidou.mybatisplus.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+/**
+ * 指令状态枚举
+ */
 public enum CommandStatus {
     SAVED(0),DELIVERED(1), DONE(2), FAILED(3),
     ;

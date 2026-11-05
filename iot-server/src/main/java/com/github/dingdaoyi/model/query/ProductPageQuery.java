@@ -4,6 +4,9 @@ import com.github.dingdaoyi.model.PageQuery;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * 产品分页查询
+ */
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class ProductPageQuery  extends PageQuery {

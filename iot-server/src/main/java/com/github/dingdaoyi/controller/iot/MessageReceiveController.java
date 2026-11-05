@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
+ * 消息接收控制器
+ *
  * @author dingyunwei
  */
 @RestController

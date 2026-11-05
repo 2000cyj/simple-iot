@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 
 /**
+ * HTTP 驱动接收入口
+ *
  * @author dingyunwei
  */
 @RestController

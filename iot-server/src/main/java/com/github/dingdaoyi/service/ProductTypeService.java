@@ -8,6 +8,9 @@ import com.github.dingdaoyi.model.vo.ProductTypeVo;
 
 import java.util.List;
 
+/**
+ * 产品类型服务接口
+ */
 public interface ProductTypeService extends IService<ProductType>{
 
 

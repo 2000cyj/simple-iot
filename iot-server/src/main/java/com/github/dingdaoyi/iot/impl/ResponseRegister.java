@@ -15,6 +15,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * 指令响应注册与匹配
+ *
  * @author dwx
  */
 @Component

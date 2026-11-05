@@ -7,6 +7,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 /**
+ * .env 环境变量加载
+ *
  * @author dingyunwei
  */
 @Slf4j

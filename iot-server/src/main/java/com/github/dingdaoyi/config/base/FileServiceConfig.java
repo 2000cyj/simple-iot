@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.net.URI;
 
 /**
+ * 文件存储服务配置
+ *
  * @author dingyunwei
  */
 @Slf4j

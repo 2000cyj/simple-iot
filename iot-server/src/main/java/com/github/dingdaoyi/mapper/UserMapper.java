@@ -7,6 +7,8 @@ import com.github.dingdaoyi.entity.User;
 import java.util.Optional;
 
 /**
+ * 用户 Mapper
+ *
  * @author dingyunwei
  */
 public interface UserMapper extends BaseMapper<User> {

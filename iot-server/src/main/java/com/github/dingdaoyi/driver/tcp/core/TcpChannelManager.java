@@ -7,6 +7,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * TCP 连接管理
+ *
  * @author dingyunwei
  */
 public class TcpChannelManager {

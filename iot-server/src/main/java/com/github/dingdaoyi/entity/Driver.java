@@ -9,6 +9,8 @@ import com.github.dingdaoyi.core.driver.DriverTypeEnum;
 import com.github.dingdaoyi.model.enu.ConnectionTypeEnum;
 
 /**
+ * 驱动实体
+ *
  * @author dingyunwei
  */
 @Data

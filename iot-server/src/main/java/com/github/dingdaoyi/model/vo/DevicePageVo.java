@@ -4,6 +4,9 @@ import com.github.dingdaoyi.entity.Device;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * 设备分页 VO
+ */
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class DevicePageVo extends Device {

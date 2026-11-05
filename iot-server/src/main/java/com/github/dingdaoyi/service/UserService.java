@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import java.util.Optional;
 
 /**
+ * 用户服务接口
+ *
  * @author dingyunwei
  */
 public interface UserService extends IService<User>{

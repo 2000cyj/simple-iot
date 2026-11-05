@@ -14,6 +14,9 @@ import java.security.SecureRandom;
 import java.util.HexFormat;
 import java.util.List;
 
+/**
+ * webhook 接入控制器
+ */
 @RestController
 @RequestMapping("/webhook/config")
 @Tag(name = "Webhook数据接入")

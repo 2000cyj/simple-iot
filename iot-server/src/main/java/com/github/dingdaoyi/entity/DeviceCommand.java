@@ -13,6 +13,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
+ * 设备指令实体
+ *
  * @author dingyunwei
  */
 @EqualsAndHashCode(callSuper = true)

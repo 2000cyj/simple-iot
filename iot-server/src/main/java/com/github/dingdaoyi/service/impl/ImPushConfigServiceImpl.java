@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * IM 推送配置服务实现
+ */
 @Service
 public class ImPushConfigServiceImpl extends ServiceImpl<ImPushConfigMapper, ImPushConfig>
     implements ImPushConfigService {

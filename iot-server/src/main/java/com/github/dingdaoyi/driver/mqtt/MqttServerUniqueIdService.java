@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 import org.tio.core.ChannelContext;
 
 /**
+ * MQTT 客户端唯一标识服务
+ *
  * @author dingyunwei
  */
 @Component

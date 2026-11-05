@@ -12,6 +12,9 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 设备服务接口
+ */
 public interface DeviceService extends IService<Device>{
 
 

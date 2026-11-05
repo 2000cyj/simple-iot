@@ -20,6 +20,8 @@ import com.github.dingdaoyi.mapper.ProductTypeMapper;
 import com.github.dingdaoyi.service.ProductTypeService;
 
 /**
+ * 产品类型服务实现
+ *
  * @author dingyunwei
  */
 @Service

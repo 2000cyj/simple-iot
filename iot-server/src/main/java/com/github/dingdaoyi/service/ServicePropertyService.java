@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
 
+/**
+ * 服务属性服务接口
+ */
 public interface ServicePropertyService extends IService<ServiceProperty>{
 
 

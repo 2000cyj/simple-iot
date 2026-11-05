@@ -9,6 +9,8 @@ import com.github.dingdaoyi.model.vo.ModelServiceVO;
 import java.util.List;
 
 /**
+ * 物模型服务服务接口
+ *
  * @author dingyunwei
  */
 public interface ModelServiceService extends IService<ModelService>{

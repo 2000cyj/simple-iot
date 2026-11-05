@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
+ * 用户实体
+ *
  * @author dingyunwei
  */
 @Schema

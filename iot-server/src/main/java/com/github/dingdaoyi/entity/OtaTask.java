@@ -12,6 +12,9 @@ import lombok.EqualsAndHashCode;
 
 import java.util.Map;
 
+/**
+ * OTA 升级任务实体
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "tb_ota_task", autoResultMap = true)

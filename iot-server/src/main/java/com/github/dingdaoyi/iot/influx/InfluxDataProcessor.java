@@ -40,6 +40,8 @@ import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
+ * InfluxDB 时序数据处理
+ *
  * @author dingyunwei
  */
 @Service

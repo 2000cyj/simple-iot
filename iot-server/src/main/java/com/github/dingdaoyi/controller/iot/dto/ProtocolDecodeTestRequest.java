@@ -5,6 +5,9 @@ import com.github.dingdaoyi.proto.model.ProtoMessageType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+/**
+ * 协议解码测试请求
+ */
 @Schema(description = "协议脚本解码测试请求")
 @Data
 public class ProtocolDecodeTestRequest {

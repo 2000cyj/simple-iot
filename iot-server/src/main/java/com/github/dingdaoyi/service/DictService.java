@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import java.util.List;
 
 /**
+ * 字典服务接口
+ *
  * @author dingyunwei
  */
 public interface DictService extends IService<Dict>{

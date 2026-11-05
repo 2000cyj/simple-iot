@@ -5,6 +5,8 @@ import com.github.dingdaoyi.model.enu.NotifyType;
 import java.util.Map;
 
 /**
+ * 消息通知服务接口
+ *
  * @author dingyunwei
  */
 public interface NotificationService {

@@ -10,6 +10,9 @@ import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 import java.util.Optional;
 
+/**
+ * TCP 认证处理器
+ */
 @Slf4j
 public class TcpAuthProcessor {
     private final DeviceService deviceService;

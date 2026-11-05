@@ -30,8 +30,9 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
+ * Web MVC 配置
+ *
  * @author wo
- * @since 2021/2/24
  */
 @Configuration
 @Order(Ordered.HIGHEST_PRECEDENCE)

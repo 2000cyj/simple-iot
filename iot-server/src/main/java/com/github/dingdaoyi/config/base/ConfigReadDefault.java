@@ -7,6 +7,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
+ * 短信发送实例初始化
+ *
  * @author dingyunwei
  */
 @Component

@@ -7,6 +7,8 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
+ * 应用启动类
+ *
  * @author dingyunwei
  */
 @SpringBootApplication

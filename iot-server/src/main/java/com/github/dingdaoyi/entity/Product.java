@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
+ * 产品实体
+ *
  * @author dingyunwei
  */
 @Schema

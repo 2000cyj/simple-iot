@@ -12,6 +12,8 @@ import lombok.Data;
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
+ * 消息接收新增参数
+ *
  * @author dingyunwei
  */
 @Data

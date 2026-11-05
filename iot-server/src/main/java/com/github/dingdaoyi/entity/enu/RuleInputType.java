@@ -4,9 +4,10 @@ import com.baomidou.mybatisplus.annotation.EnumValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
+ * 规则输入类型枚举
+ *
  * @author dingyunwei
  */
-
 public enum RuleInputType {
     /**
      * 属性

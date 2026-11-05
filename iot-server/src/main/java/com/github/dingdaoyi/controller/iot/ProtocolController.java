@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
+ * 协议控制器
+ *
  * @author dingyunwei
  */
 @AllArgsConstructor

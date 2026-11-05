@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * 系统协议初始化
+ *
  * @author dingyunwei
  */
 @Service

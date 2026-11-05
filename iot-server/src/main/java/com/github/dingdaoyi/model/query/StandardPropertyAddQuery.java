@@ -14,6 +14,8 @@ import lombok.Data;
 import java.util.List;
 
 /**
+ * 标准属性新增参数
+ *
  * @author dingyunwei
  */
 @Data

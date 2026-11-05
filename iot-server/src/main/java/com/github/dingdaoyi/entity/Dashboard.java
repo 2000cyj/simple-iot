@@ -13,6 +13,9 @@ import lombok.EqualsAndHashCode;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 仪表板实体
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName(value = "tb_dashboard", autoResultMap = true)

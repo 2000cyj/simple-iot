@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
+ * IoT 平台配置
+ *
  * @author dingyunwei
  */
 @Configuration

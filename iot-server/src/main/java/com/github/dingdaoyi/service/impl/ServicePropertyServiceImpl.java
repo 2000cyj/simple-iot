@@ -9,6 +9,8 @@ import com.github.dingdaoyi.entity.ServiceProperty;
 import com.github.dingdaoyi.mapper.ServicePropertyMapper;
 import com.github.dingdaoyi.service.ServicePropertyService;
 /**
+ * 服务属性服务实现
+ *
  * @author dingyunwei
  */
 @Service

@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
+ * 设备 Mapper
+ *
  * @author dingyunwei
  */
 public interface DeviceMapper extends BaseMapper<Device> {

@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 /**
+ * 设备影子服务实现
+ *
  * @author dingyunwei
  */
 @Slf4j

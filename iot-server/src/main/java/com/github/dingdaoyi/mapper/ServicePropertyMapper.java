@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.github.dingdaoyi.entity.ServiceProperty;
 
 /**
+ * 服务属性 Mapper
+ *
  * @author dingyunwei
  */
 public interface ServicePropertyMapper extends BaseMapper<ServiceProperty> {

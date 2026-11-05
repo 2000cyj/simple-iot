@@ -26,6 +26,8 @@ import com.github.dingdaoyi.service.ModelServiceService;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
+ * 物模型服务服务实现
+ *
  * @author dingyunwei
  */
 @Service

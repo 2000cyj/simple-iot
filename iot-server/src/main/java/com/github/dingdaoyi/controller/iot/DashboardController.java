@@ -22,6 +22,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 仪表板控制器
+ */
 @RestController
 @RequestMapping("/dashboard")
 @RequiredArgsConstructor

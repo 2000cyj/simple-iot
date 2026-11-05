@@ -8,6 +8,8 @@ import com.github.dingdaoyi.model.vo.ProductPageVo;
 import org.apache.ibatis.annotations.Param;
 
 /**
+ * 产品 Mapper
+ *
  * @author dingyunwei
  */
 public interface ProductMapper extends BaseMapper<Product> {

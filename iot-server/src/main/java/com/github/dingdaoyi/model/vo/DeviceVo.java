@@ -9,6 +9,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * 设备 VO
+ */
 @EqualsAndHashCode(callSuper = true)
 @Data
 public class DeviceVo extends Device {

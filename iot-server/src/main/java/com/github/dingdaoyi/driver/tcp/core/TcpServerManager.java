@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * TCP 服务端管理
+ *
  * @author dingyunwei
  */
 @Slf4j

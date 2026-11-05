@@ -1,8 +1,9 @@
 package com.github.dingdaoyi.service;
 
 /**
+ * 资源占用检查接口
+ *
  * @author dingyunwei
- * 判断是否使用icon
  */
 public interface ResourceUseService<T> {
 

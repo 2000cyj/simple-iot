@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
+ * 产品控制器
+ *
  * @author dingyunwei
  */
 @AllArgsConstructor

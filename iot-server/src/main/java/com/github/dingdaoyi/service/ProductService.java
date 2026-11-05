@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
+ * 产品服务接口
+ *
  * @author dingyunwei
  */
 public interface ProductService extends IService<Product>{

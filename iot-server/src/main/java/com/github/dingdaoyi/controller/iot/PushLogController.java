@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 推送日志控制器
+ */
 @AllArgsConstructor
 @RestController
 @RequestMapping("/push-config")

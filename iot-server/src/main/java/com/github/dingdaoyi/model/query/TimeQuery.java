@@ -7,6 +7,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDateTime;
 
 /**
+ * 时间范围查询参数
+ *
  * @author dingyunwei
  */
 @Data

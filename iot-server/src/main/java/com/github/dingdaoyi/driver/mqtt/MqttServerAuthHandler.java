@@ -18,6 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static com.github.dingdaoyi.driver.mqtt.MqttServerUniqueIdService.ERROR_UNIQUE_ID;
 
 /**
+ * MQTT 认证处理器
+ *
  * @author dingyunwei
  */
 @Slf4j

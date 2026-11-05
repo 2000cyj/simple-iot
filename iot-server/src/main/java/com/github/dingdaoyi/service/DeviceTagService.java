@@ -6,6 +6,9 @@ import com.github.dingdaoyi.entity.DeviceTag;
 
 import java.util.List;
 
+/**
+ * 设备标签服务接口
+ */
 public interface DeviceTagService extends IService<DeviceTag> {
 
     /**

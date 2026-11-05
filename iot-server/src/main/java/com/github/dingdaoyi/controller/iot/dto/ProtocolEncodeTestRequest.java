@@ -7,6 +7,9 @@ import lombok.Data;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 协议编码测试请求
+ */
 @Schema(description = "协议脚本编码测试请求")
 @Data
 public class ProtocolEncodeTestRequest {

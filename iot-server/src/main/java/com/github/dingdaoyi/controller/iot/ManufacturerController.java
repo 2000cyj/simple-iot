@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
+ * 厂商控制器
+ *
  * @author dingyunwei
  */
 @AllArgsConstructor

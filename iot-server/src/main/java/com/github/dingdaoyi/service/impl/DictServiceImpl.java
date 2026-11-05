@@ -10,6 +10,8 @@ import com.github.dingdaoyi.service.DictService;
 import java.util.List;
 
 /**
+ * 字典服务实现
+ *
  * @author dingyunwei
  */
 @Service

@@ -12,6 +12,8 @@ import lombok.Data;
 import java.util.List;
 
 /**
+ * 物模型属性更新参数
+ *
  * @author dingyunwei
  */
 @Data

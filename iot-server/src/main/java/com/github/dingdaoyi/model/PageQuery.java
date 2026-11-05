@@ -8,8 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 分页查询基类
+ *
  * @author lx
- * @since 2021-03-25
  */
 @Data
 @Schema(name = "基础分页", description = "基础分页")

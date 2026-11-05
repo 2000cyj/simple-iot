@@ -8,6 +8,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 /**
+ * 跨域访问配置
+ *
  * @author dingyunwei
  */
 @Configuration

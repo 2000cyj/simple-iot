@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 服务新增参数
+ *
  * @author dingyunwei
  */
 @Data

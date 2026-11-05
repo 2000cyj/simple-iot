@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
+ * 短信供应商配置读取
+ *
  * @author dingyunwei
  */
 @Component

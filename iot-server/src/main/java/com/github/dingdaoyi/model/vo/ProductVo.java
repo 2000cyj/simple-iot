@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
+ * 产品 VO
+ *
  * @author dingyunwei
  */
 @EqualsAndHashCode(callSuper = true)

@@ -19,6 +19,8 @@ import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
+ * 物模型服务实现
+ *
  * @author dingyunwei
  */
 @Service

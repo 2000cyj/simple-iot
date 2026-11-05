@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
+ * 服务类型枚举
+ *
  * @author dingyunwei
  */
-
 @Getter
 public enum ServiceTypeEnum {
     SERVICE(1),EVENT(2);

@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
+ * 设备数据查询参数
+ *
  * @author dingyunwei
  */
 @EqualsAndHashCode(callSuper = true)

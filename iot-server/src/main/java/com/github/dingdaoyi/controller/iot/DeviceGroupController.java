@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 设备分组控制器
+ */
 @RestController
 @RequestMapping("/device-group")
 @Tag(name = "设备分组")

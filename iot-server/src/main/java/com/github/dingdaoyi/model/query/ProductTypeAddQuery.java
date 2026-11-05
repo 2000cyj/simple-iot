@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
+ * 产品类型新增参数
+ *
  * @author dingyunwei
  */
 @Data

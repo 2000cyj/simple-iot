@@ -7,6 +7,8 @@ import lombok.EqualsAndHashCode;
 import java.util.List;
 
 /**
+ * 产品类型 VO
+ *
  * @author dingyunwei
  */
 @EqualsAndHashCode(callSuper = true)

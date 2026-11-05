@@ -12,6 +12,8 @@ import com.github.dingdaoyi.mapper.MessageReceiveMapper;
 import com.github.dingdaoyi.entity.MessageReceive;
 import com.github.dingdaoyi.service.MessageReceiveService;
 /**
+ * 消息接收服务实现
+ *
  * @author dingyunwei
  */
 @Service

@@ -8,6 +8,8 @@ import lombok.Data;
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
+ * 设备更新参数
+ *
  * @author dingyunwei
  */
 @Data

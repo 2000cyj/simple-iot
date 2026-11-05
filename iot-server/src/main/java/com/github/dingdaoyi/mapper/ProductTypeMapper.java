@@ -7,6 +7,9 @@ import org.apache.ibatis.annotations.Param;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.github.dingdaoyi.entity.ProductType;
 
+/**
+ * 产品类型 Mapper
+ */
 public interface ProductTypeMapper extends BaseMapper<ProductType> {
 
     /**

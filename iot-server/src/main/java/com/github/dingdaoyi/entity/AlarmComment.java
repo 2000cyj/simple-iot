@@ -9,6 +9,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * 告警评论实体
+ */
 @Data
 @TableName("tb_alarm_comment")
 @Schema(description = "告警评论")

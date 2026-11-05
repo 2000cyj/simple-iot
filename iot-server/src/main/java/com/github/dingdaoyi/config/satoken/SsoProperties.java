@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * SSO 配置属性
+ *
  * @author dyw
  */
 @ConfigurationProperties(prefix = "sa-token.sso")

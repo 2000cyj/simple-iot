@@ -16,6 +16,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 设备标签服务实现
+ */
 @Service
 public class DeviceTagServiceImpl extends ServiceImpl<DeviceTagMapper, DeviceTag>
         implements DeviceTagService {

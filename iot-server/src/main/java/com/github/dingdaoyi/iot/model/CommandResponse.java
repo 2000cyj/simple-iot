@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * 指令响应模型
+ *
  * @author dwx
  */
 @Data

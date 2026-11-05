@@ -7,6 +7,8 @@ import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 /**
+ * 缓存服务实现
+ *
  * @author dingyunwei
  */
 @Service

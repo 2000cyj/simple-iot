@@ -9,6 +9,8 @@ import java.util.concurrent.Executors;
 
 
 /**
+ * 异步执行器配置
+ *
  * @author dingyunwei
  */
 @Configuration

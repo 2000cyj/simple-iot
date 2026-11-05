@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
+ * 协议服务接口
+ *
  * @author dingyunwei
  */
 public interface ProtocolService extends IService<Protocol>{

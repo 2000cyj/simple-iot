@@ -12,6 +12,8 @@ import lombok.EqualsAndHashCode;
 import java.util.List;
 
 /**
+ * 物模型服务 VO
+ *
  * @author dingyunwei
  */
 @EqualsAndHashCode(callSuper = true)

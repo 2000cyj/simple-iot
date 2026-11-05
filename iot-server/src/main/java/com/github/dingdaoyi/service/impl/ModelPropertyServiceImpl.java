@@ -36,6 +36,8 @@ import org.springframework.transaction.annotation.Transactional;
 import static com.github.dingdaoyi.service.CacheService.TSL_MODEL_CACHE;
 
 /**
+ * 物模型属性服务实现
+ *
  * @author dingyunwei
  */
 @Service

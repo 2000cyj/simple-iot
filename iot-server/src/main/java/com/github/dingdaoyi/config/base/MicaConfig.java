@@ -13,6 +13,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
 /**
+ * mqtt 服务端配置
+ *
  * @author dingyunwei
  */
 @Configuration

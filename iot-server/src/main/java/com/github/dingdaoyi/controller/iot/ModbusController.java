@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * modbus 配置控制器
+ */
 @RestController
 @RequestMapping("/modbus")
 @Tag(name = "Modbus驱动管理")

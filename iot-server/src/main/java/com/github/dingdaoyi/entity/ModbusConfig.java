@@ -9,6 +9,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+/**
+ * modbus 配置实体
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("tb_modbus_config")

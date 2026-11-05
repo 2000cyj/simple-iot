@@ -10,6 +10,8 @@ import com.github.dingdaoyi.proto.model.KeyValue;
 import java.util.List;
 
 /**
+ * 设备数据服务接口
+ *
  * @author dingyunwei
  */
 public interface DeviceDataService {

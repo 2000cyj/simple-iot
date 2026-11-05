@@ -7,6 +7,9 @@ import lombok.Data;
 import java.util.Optional;
 import java.util.regex.Matcher;
 
+/**
+ * MQTT 主题解析
+ */
 @Data
 public class MqttTopic {
 

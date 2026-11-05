@@ -3,6 +3,9 @@ package com.github.dingdaoyi.iot.proto.defaul.model;
 import com.github.dingdaoyi.proto.model.ProtocolException;
 import lombok.Data;
 
+/**
+ * MQTT 错误信息
+ */
 @Data
 public class MqttErrors {
     private int code;

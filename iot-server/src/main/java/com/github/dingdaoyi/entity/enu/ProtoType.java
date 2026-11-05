@@ -9,9 +9,10 @@ import com.github.dingdaoyi.iot.proto.impl.SystemProtocolInitialize;
 import lombok.Getter;
 
 /**
+ * 协议类型枚举
+ *
  * @author dingyunwei
  */
-
 @Getter
 public enum ProtoType {
     JAVA(1, JavaProtocolInitialize.class),

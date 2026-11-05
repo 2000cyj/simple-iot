@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
+ * MQTT 报文头
+ *
  * @author dingyunwei
  */
 @Data

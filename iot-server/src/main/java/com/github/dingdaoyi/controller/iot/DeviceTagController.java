@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 设备标签控制器
+ */
 @RestController
 @RequestMapping("/device-tag")
 @Tag(name = "设备标签")

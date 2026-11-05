@@ -23,6 +23,8 @@ import com.github.dingdaoyi.entity.Product;
 import com.github.dingdaoyi.service.ProductService;
 
 /**
+ * 产品服务实现
+ *
  * @author dingyunwei
  */
 @Service

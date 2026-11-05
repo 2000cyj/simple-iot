@@ -6,6 +6,8 @@ import com.github.dingdaoyi.core.base.PageResult;
 import com.github.dingdaoyi.model.query.MessageRecivePageQuery;
 
 /**
+ * 消息接收服务接口
+ *
  * @author dingyunwei
  */
 public interface MessageReceiveService extends IService<MessageReceive>{

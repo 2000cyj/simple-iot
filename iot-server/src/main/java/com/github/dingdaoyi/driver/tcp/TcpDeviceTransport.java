@@ -20,6 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
+ * TCP 驱动传输
+ *
  * @author dingyunwei
  */
 @Slf4j

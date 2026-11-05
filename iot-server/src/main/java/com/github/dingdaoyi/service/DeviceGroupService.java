@@ -8,6 +8,9 @@ import com.github.dingdaoyi.entity.DeviceTag;
 
 import java.util.List;
 
+/**
+ * 设备分组服务接口
+ */
 public interface DeviceGroupService extends IService<DeviceGroup> {
 
     /**

@@ -4,6 +4,8 @@ import com.github.dingdaoyi.core.driver.DeviceTransport;
 import org.springframework.stereotype.Component;
 
 /**
+ * HTTP 驱动传输
+ *
  * @author dingyunwei
  */
 @Component

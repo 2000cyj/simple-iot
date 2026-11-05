@@ -34,6 +34,8 @@ import com.github.dingdaoyi.entity.Device;
 import com.github.dingdaoyi.service.DeviceService;
 
 /**
+ * 设备服务实现
+ *
  * @author dingyunwei
  */
 @Service

@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
+ * 设备事件数据
+ *
  * @author dingyunwei
  */
 @Getter

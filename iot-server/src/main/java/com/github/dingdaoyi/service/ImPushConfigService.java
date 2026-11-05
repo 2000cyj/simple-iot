@@ -7,6 +7,9 @@ import com.github.dingdaoyi.model.enu.NotifyType;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * IM 推送配置服务接口
+ */
 public interface ImPushConfigService extends IService<ImPushConfig> {
 
     Optional<ImPushConfig> getEnabledByPlatform(NotifyType platform);

@@ -14,6 +14,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
+ * 本地文件存储实现
+ *
  * @author dingyunwei
  */
 public class LocalStorageService implements StorageService {

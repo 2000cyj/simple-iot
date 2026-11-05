@@ -9,6 +9,8 @@ import lombok.Data;
 import org.apache.commons.lang3.RandomStringUtils;
 
 /**
+ * 产品新增参数
+ *
  * @author dingyunwei
  */
 @Data

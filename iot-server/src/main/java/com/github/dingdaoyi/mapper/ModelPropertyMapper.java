@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.github.dingdaoyi.entity.ModelProperty;
 
 /**
+ * 物模型属性 Mapper
+ *
  * @author dingyunwei
  */
 public interface ModelPropertyMapper extends BaseMapper<ModelProperty> {

@@ -16,6 +16,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 设备分组服务实现
+ */
 @Service
 public class DeviceGroupServiceImpl extends ServiceImpl<DeviceGroupMapper, DeviceGroup>
         implements DeviceGroupService {

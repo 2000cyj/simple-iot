@@ -9,6 +9,8 @@ import com.github.dingdaoyi.model.query.StandardPropertyAddQuery;
 import java.util.List;
 
 /**
+ * 物模型属性服务接口
+ *
  * @author dingyunwei
  */
 public interface ModelPropertyService extends IService<ModelProperty> {

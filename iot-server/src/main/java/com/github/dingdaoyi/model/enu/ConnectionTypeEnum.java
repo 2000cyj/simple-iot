@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
+ * 连接类型枚举
+ *
  * @author dingyunwei
  */
-
 @Getter
 public enum ConnectionTypeEnum {
     DEFAULT("DEFAULT", "平台内置"),

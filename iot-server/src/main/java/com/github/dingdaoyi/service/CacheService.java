@@ -1,5 +1,8 @@
 package com.github.dingdaoyi.service;
 
+/**
+ * 缓存服务接口
+ */
 public interface CacheService {
 
       String TSL_MODEL_CACHE = "tslModelCache";

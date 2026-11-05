@@ -4,6 +4,8 @@ package com.github.dingdaoyi.iot;
 import com.github.dingdaoyi.proto.model.DeviceRequest;
 
 /**
+ * IoT 数据处理接口
+ *
  * @author dingyunwei
  */
 public interface IotDataProcessor {

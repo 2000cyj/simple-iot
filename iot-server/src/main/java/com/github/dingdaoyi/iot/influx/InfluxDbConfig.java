@@ -9,6 +9,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 
 /**
+ * InfluxDB 客户端配置
+ *
  * @author dingyunwei
  */
 @Slf4j

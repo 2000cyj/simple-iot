@@ -8,6 +8,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+/**
+ * 图标实体
+ */
 @Schema
 @Data
 @TableName(value = "tb_icon")

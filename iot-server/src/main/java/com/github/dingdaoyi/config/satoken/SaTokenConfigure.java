@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 鉴权拦截器配置
+ *
  * @author dingyunwei
  */
 @Configuration

@@ -10,6 +10,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
+ * 设备实体
+ *
  * @author dingyunwei
  */
 @Schema

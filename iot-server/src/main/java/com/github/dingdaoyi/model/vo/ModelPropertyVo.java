@@ -9,6 +9,8 @@ import lombok.EqualsAndHashCode;
 import java.util.stream.Collectors;
 
 /**
+ * 物模型属性 VO
+ *
  * @author dingyunwei
  */
 @EqualsAndHashCode(callSuper = true)
