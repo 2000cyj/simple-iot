@@ -1,4 +1,5 @@
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import type { BaseResult, PageResult } from '@/types/common'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { useAccountStore } from '@/store'
@@ -17,21 +18,9 @@ declare module 'axios' {
   }
 }
 
-/** 后端统一响应包装（BaseResult） */
-export interface BaseResult<T = unknown> {
-  code: number
-  msg: string
-  success: boolean
-  data: T
-}
-
-/** 后端分页载荷（PageResult） */
-export interface PageResult<T = unknown> {
-  records: T[]
-  total: number
-  current: number
-  size: number
-}
+// BaseResult 与 PageResult 的唯一权威定义在 @/types/common，
+// 此处转出仅为方便从请求模块一并引入。
+export type { BaseResult, PageResult }
 
 /** Blob 下载接口的返回体（由响应拦截器拆包产生） */
 export interface BlobDownloadResult {
