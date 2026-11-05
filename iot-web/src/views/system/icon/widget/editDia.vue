@@ -1,31 +1,54 @@
-<script lang="jsx" setup>
+<script lang="ts" setup>
+import type { FormRules, UploadFile, UploadInstance, UploadRawFile } from 'element-plus'
+import type { Icon } from '@/types/api'
+import type { BaseResult } from '@/types/common'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { iconAddApi, iconEditeApi } from '@/api'
-import { useForm } from '@/composables/useForm.js'
-import service from '@/utils/request.js'
+import { useForm } from '@/composables/useForm'
+import service from '@/utils/request'
 
-const props = defineProps(['datas', 'modelValue'])
-const emits = defineEmits(['update', 'update:modelValue'])
+interface Props {
+  /** 当前编辑的图标（新增时为空） */
+  datas?: Icon | null
+  /** 弹窗可见性 */
+  modelValue?: boolean
+}
+
+/** el-upload 的 file-list 项 */
+interface IconUploadFile {
+  name: string
+  url: string
+  status: 'success'
+  uid?: number
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  /** 提交成功后通知父组件刷新列表 */
+  'update': []
+  /** 弹窗显示状态变化 */
+  'update:modelValue': [value: boolean]
+}>()
 const { t } = useI18n()
-const rules = ref({
+const rules = ref<FormRules>({
   name: [{ required: true, message: t('system.system_icon_dialog'), trigger: 'blur' }],
 })
 
-const uploadRef = ref(null)
+const uploadRef = ref<UploadInstance | null>(null)
 const uploading = ref(false)
-const fileList = ref([])
+const fileList = ref<IconUploadFile[]>([])
 
-const { form, onSubmit: handleSubmit, editRef, loading, onClose, resetForm } = useForm({
+const { form, onSubmit: handleSubmit, editRef, loading, onClose, resetForm } = useForm<Icon>({
   api: props.datas ? iconEditeApi : iconAddApi,
   callback: () => {
-    emits('update')
-    emits('update:modelValue', false)
+    emit('update')
+    emit('update:modelValue', false)
   },
   closeCallback: () => {
-    emits('update:modelValue', false)
+    emit('update:modelValue', false)
   },
   defForm: {
     name: '',
@@ -50,7 +73,7 @@ function onSubmit() {
 }
 
 // 上传前校验
-function beforeUpload(file) {
+function beforeUpload(file: UploadRawFile) {
   const isImage = file.type.startsWith('image/')
   if (!isImage) {
     ElMessage.error(t('system.icon_dialog_system_icon_dialog'))
@@ -65,7 +88,7 @@ function beforeUpload(file) {
 }
 
 // 自定义上传
-function handleUpload(uploadFile) {
+function handleUpload(uploadFile: UploadFile) {
   // el-upload 的 on-change 传入的是 UploadFile 对象，真正的文件在 raw 中
   const file = uploadFile.raw
   if (!file) {
@@ -82,7 +105,7 @@ function handleUpload(uploadFile) {
   const formData = new FormData()
   formData.append('file', file)
 
-  service.post('/file/upload', formData, {
+  service.post<BaseResult<string[]>>('/file/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },

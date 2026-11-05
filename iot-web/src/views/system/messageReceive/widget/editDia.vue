@@ -1,13 +1,27 @@
-<script lang="jsx" setup>
+<script lang="ts" setup>
+import type { FormRules } from 'element-plus'
+import type { MessageReceive, MessageReceiveUpdateQuery, NotifyType } from '@/types/api'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { messageReceiveAddApi, messageReceiveEditApi } from '@/api'
-import { useForm } from '@/composables/useForm.js'
+import { useForm } from '@/composables/useForm'
 
-const props = defineProps(['datas', 'modelValue'])
-const emits = defineEmits(['update', 'update:modelValue'])
+interface Props {
+  /** 当前编辑的行数据（新增时为空） */
+  datas?: MessageReceive | null
+  /** 弹窗可见性 */
+  modelValue?: boolean
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<{
+  /** 提交成功后通知父组件刷新列表 */
+  'update': []
+  /** 弹窗显示状态变化 */
+  'update:modelValue': [value: boolean]
+}>()
 const { t } = useI18n()
-const notifyTypeOpt = [
+const notifyTypeOpt: Array<{ label: string, value: NotifyType }> = [
   {
     label: t('system.email'),
     value: 1,
@@ -22,15 +36,15 @@ const notifyTypeOpt = [
   },
 ]
 
-const rules = ref({
+const rules = ref<FormRules>({
   name: [{ required: true, message: t('system.name_required'), trigger: 'blur' }],
 })
 
-const { form, onSubmit: handleSubmit, editRef, loading } = useForm({
+const { form, onSubmit: handleSubmit, editRef, loading } = useForm<MessageReceiveUpdateQuery>({
   api: props.datas ? messageReceiveEditApi : messageReceiveAddApi,
   callback: () => {
-    emits('update')
-    emits('update:modelValue', false)
+    emit('update')
+    emit('update:modelValue', false)
   },
 })
 
@@ -39,7 +53,7 @@ function onSubmit() {
 }
 
 function onCancel() {
-  emits('update:modelValue', false)
+  emit('update:modelValue', false)
 }
 
 watch(() => props.datas, (val) => {

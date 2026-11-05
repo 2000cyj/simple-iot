@@ -1,4 +1,7 @@
-<script setup>
+<script setup lang="ts">
+import type { WebhookIngressPayload } from '@/api/webhook'
+import type { Device, Product, WebhookIngress } from '@/types/api'
+import { Link, Plus, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -10,28 +13,56 @@ import {
   webhookRegenerateSecretApi,
   webhookUpdateApi,
 } from '@/api/webhook'
-import PageHeader from '@/components/PageHeader.vue'
 import IotTable from '@/components/IotTable.vue'
-import { Link, Plus, Refresh } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
+
+/** Webhook 表单（id / deviceId 用 null 表示「未选择」） */
+interface WebhookForm {
+  id: number | null
+  name: string
+  deviceId: number | null | undefined
+  enabled: boolean | undefined
+  description: string
+}
+
+/** 新建成功后展示的凭据（只需要 token / secret） */
+interface WebhookCredential {
+  id?: number
+  token?: string
+  secret?: string
+}
+
+/** 表格列配置 */
+interface TableColumn {
+  prop?: string
+  label?: string
+  width?: number
+  minWidth?: number
+  align?: 'left' | 'center' | 'right'
+  slot?: string
+  fixed?: 'left' | 'right' | boolean
+  showOverflowTooltip?: boolean
+  render?: (scope: { row: WebhookIngress }) => string | number | undefined
+}
 
 const { t } = useI18n()
 const loading = ref(false)
-const list = ref([])
-const products = ref([])
-const devices = ref([])
+const list = ref<WebhookIngress[]>([])
+const products = ref<Product[]>([])
+const devices = ref<Device[]>([])
 const dialogVisible = ref(false)
 const editing = ref(false)
 const secretDialogVisible = ref(false)
-const createdConfig = ref(null)
+const createdConfig = ref<WebhookCredential | null>(null)
 
-const form = reactive({
+const form = reactive<WebhookForm>({
   id: null,
   name: '',
   deviceId: null,
   enabled: true,
   description: '',
 })
-const selectedProductId = ref(null)
+const selectedProductId = ref<number | null>(null)
 
 async function loadData() {
   loading.value = true
@@ -44,15 +75,26 @@ async function loadData() {
   loading.value = false
 }
 
-async function loadDevices(productId) {
+async function loadDevices(productId?: number | null) {
   // ponytail: no productId = load all devices, not return empty
   const res = await deviceListApi(productId ? { productId } : {})
   devices.value = res.data || []
 }
 
-function getDeviceName(deviceId) {
+function getDeviceName(deviceId?: number): string | number | undefined {
   const d = devices.value.find(d => d.id === deviceId)
   return d ? `${d.deviceName} (${d.deviceKey})` : deviceId
+}
+
+/**
+ * 表单 → 后端 Webhook 载荷。
+ *
+ * 前端表单用 `null` 表示「未选择」，而后端 `WebhookIngressPayload` 的可选字段
+ * 用「缺失」表达（JSON 中不出现该键）。两者对后端而言等价（都是 Java null），
+ * 但为了保持改造前的请求体完全一致（仍然显式发送 null），这里只做类型层面的转换。
+ */
+function toPayload(source: WebhookForm): WebhookIngressPayload {
+  return source as unknown as WebhookIngressPayload
 }
 
 function onAdd() {
@@ -69,7 +111,7 @@ function onAdd() {
   dialogVisible.value = true
 }
 
-function onEdit(row) {
+function onEdit(row: WebhookIngress) {
   editing.value = true
   Object.assign(form, {
     id: row.id,
@@ -84,13 +126,13 @@ function onEdit(row) {
 }
 
 async function onSubmit() {
-  const payload = {
+  const payload = toPayload({
     id: form.id,
     name: form.name,
     deviceId: form.deviceId,
     enabled: form.enabled,
     description: form.description,
-  }
+  })
   if (editing.value) {
     await webhookUpdateApi(payload)
     ElMessage.success(t('common.editSuccess'))
@@ -105,21 +147,21 @@ async function onSubmit() {
   loadData()
 }
 
-async function onDelete(id) {
+async function onDelete(id: number) {
   await ElMessageBox.confirm(t('common.confirmDelete'), t('common.tip'), { type: 'warning' })
   await webhookDeleteApi(id)
   ElMessage.success(t('common.deleteSuccess'))
   loadData()
 }
 
-async function onRegenerateSecret(id) {
+async function onRegenerateSecret(id: number) {
   await ElMessageBox.confirm(t('webhook.regenerateConfirm'), t('common.tip'), { type: 'warning' })
   const res = await webhookRegenerateSecretApi(id)
   createdConfig.value = { id, secret: res.data, token: list.value.find(w => w.id === id)?.token }
   secretDialogVisible.value = true
 }
 
-function copyText(text) {
+function copyText(text: string) {
   navigator.clipboard.writeText(text)
   ElMessage.success(t('common.copySuccess'))
 }
@@ -132,8 +174,6 @@ const webhookUrl = computed(() => {
 const curlExample = computed(() => {
   const token = createdConfig.value?.token || 'YOUR_TOKEN'
   const secret = createdConfig.value?.secret || 'YOUR_SECRET'
-  const ts = Date.now()
-  const body = '{"temperature":25.5,"humidity":60}'
   return `# 1. 计算签名
 TS=$(date +%s%3N)
 BODY='{"temperature":25.5,"humidity":60}'
@@ -149,7 +189,7 @@ curl -X POST "${window.location.origin}/iot/webhook/${token}" \\
 
 onMounted(loadData)
 
-const columns = computed(() => [
+const columns = computed<TableColumn[]>(() => [
   { prop: 'name', label: t('webhook.name'), minWidth: 120 },
   { prop: 'deviceId', label: t('webhook.device'), minWidth: 140, render: ({ row }) => getDeviceName(row.deviceId) },
   { prop: 'token', label: 'Token', minWidth: 200, slot: 'token' },
@@ -236,13 +276,13 @@ const columns = computed(() => [
       <el-descriptions :column="1" border>
         <el-descriptions-item label="Token">
           <code class="mono-text">{{ createdConfig?.token }}</code>
-          <el-button link type="primary" size="small" class="copy-btn" @click="copyText(createdConfig?.token)">
+          <el-button link type="primary" size="small" class="copy-btn" @click="copyText(createdConfig?.token ?? '')">
             {{ t('common.copy') }}
           </el-button>
         </el-descriptions-item>
         <el-descriptions-item label="Secret">
           <code class="mono-text">{{ createdConfig?.secret }}</code>
-          <el-button link type="primary" size="small" class="copy-btn" @click="copyText(createdConfig?.secret)">
+          <el-button link type="primary" size="small" class="copy-btn" @click="copyText(createdConfig?.secret ?? '')">
             {{ t('common.copy') }}
           </el-button>
         </el-descriptions-item>

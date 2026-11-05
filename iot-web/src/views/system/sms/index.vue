@@ -1,4 +1,16 @@
-<script setup>
+<script setup lang="ts">
+import type { FormInstance, FormRules } from 'element-plus'
+import type { DictEnumItem } from '@/api/dict'
+import type { SmsTemplateUpdatePayload } from '@/api/sms'
+import type {
+  SmsConfig,
+  SmsConfigAddQuery,
+  SmsConfigUpdateQuery,
+  SmsSupplier,
+  SmsTemplate,
+  SmsTemplateAddQuery,
+  SmsTemplateType,
+} from '@/types/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -6,19 +18,104 @@ import { getSmsSupplier, getSmsTemplateType } from '@/api/dict'
 import { addSmsConfig, addSmsTemplate, deleteSmsConfig, deleteSmsTemplate, getSmsConfigList, getSmsTemplateList, sendSms, sendSmsWithTemplate, setDefaultConfig, updateConfigStatus, updateSmsConfig, updateSmsTemplate } from '@/api/sms'
 import IotTable from '@/components/IotTable.vue'
 
+/** 字典枚举项（template-type 的 desc 在后端是字符串） */
+interface DictEnumItemWithDesc {
+  /** 枚举常量名 */
+  name?: string
+  /** @EnumValue 字段的值 */
+  code?: string | number
+  /** @JsonValue 字段的值 */
+  value?: string | number
+  /** 备注文案 */
+  desc?: string
+}
+
+/** 短信配置表单 */
+interface SmsConfigForm {
+  /** 配置 ID（新增时为空） */
+  id?: number
+  /** 配置名称 */
+  name: string
+  /** 短信供应商（初始为空字符串，选定后为合法枚举值） */
+  supplier: SmsSupplier | ''
+  /** 访问密钥 */
+  accessKey: string
+  /** 密钥 */
+  secretKey: string
+  /** 短信签名 */
+  signName: string
+  /** 接入点 */
+  endpoint: string
+  /** 区域 */
+  region: string
+  /** 其他配置 JSON */
+  configJson: Record<string, string>
+  /** 状态：1 启用 2 禁用 */
+  status?: number
+  /** 是否默认配置 */
+  isDefault?: boolean
+}
+
+/** 短信发送表单 */
+interface SmsSendForm {
+  /** 手机号 */
+  phone: string
+  /** 短信内容 */
+  message: string
+  /** 发送方式：text 文本 / template 模板 */
+  sendType: 'text' | 'template'
+  /** 模板类型 */
+  templateType: string
+  /** 模板参数（JSON 字符串） */
+  templateParamsStr: string
+  /** 使用的短信配置 ID */
+  configId?: number
+}
+
+/** 短信模板表单 */
+interface SmsTemplateForm {
+  /** 模板 ID（新增时为空） */
+  id?: number
+  /** 所属配置 ID */
+  configId?: number
+  /** 模板类型 */
+  templateType: string
+  /** 模板 ID（业务侧） */
+  templateId: string
+  /** 模板名称 */
+  templateName: string
+  /** 模板内容 */
+  templateContent: string
+}
+
+/** 表格列配置 */
+interface TableColumn<T> {
+  prop?: string
+  label?: string
+  width?: number
+  minWidth?: number
+  align?: 'left' | 'center' | 'right'
+  slot?: string
+  fixed?: 'left' | 'right' | boolean
+  showOverflowTooltip?: boolean
+  render?: (scope: { row: T }) => string
+}
+
 const { t } = useI18n()
 const activeTab = ref('config')
 const listLoading = ref(true)
-const list = ref([])
-const suppliers = ref([])
-const templateTypes = ref([])
-const templateList = ref([])
+const list = ref<SmsConfig[]>([])
+const suppliers = ref<DictEnumItem[]>([])
+const templateTypes = ref<DictEnumItemWithDesc[]>([])
+const templateList = ref<SmsTemplate[]>([])
 
-const listQuery = reactive({
+const listQuery = reactive<{
+  name?: string
+}>({
   name: undefined,
 })
 
-const temp = reactive({
+const temp = reactive<SmsConfigForm>({
   id: undefined,
   name: '',
   supplier: '',
@@ -30,7 +127,7 @@ const temp = reactive({
   configJson: {},
 })
 
-const sendTemp = reactive({
+const sendTemp = reactive<SmsSendForm>({
   phone: '',
   message: '',
   sendType: 'text',
@@ -39,7 +136,7 @@ const sendTemp = reactive({
   configId: undefined,
 })
 
-const templateTemp = reactive({
+const templateTemp = reactive<SmsTemplateForm>({
   id: undefined,
   configId: undefined,
   templateType: '',
@@ -52,22 +149,22 @@ const dialogFormVisible = ref(false)
 const templateDialogVisible = ref(false)
 const templateFormVisible = ref(false)
 const templateFormTitle = ref(t('system.sms_add_template'))
-const currentConfigId = ref(null)
+const currentConfigId = ref<number | null>(null)
 const dialogStatus = ref('')
 
-const textMap = {
+const textMap: Record<string, string> = {
   update: t('common.edit'),
   create: t('system.sms_create'),
 }
 
-const rules = {
+const rules: FormRules = {
   name: [{ required: true, message: t('system.config_name_required_2'), trigger: 'blur' }],
   supplier: [{ required: true, message: t('system.supplier_required'), trigger: 'change' }],
   accessKey: [{ required: true, message: t('system.access_key_required'), trigger: 'blur' }],
   secretKey: [{ required: true, message: t('system.secret_key_required'), trigger: 'blur' }],
 }
 
-const sendRules = {
+const sendRules: FormRules = {
   phone: [
     { required: true, message: t('system.phone_number_required'), trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: t('system.invalid_phone_number'), trigger: 'blur' },
@@ -76,25 +173,47 @@ const sendRules = {
   templateType: [{ required: true, message: t('system.template_type_required'), trigger: 'change' }],
 }
 
-const templateRules = {
+const templateRules: FormRules = {
   templateType: [{ required: true, message: t('system.template_type_required'), trigger: 'change' }],
   templateName: [{ required: true, message: t('system.template_name_required'), trigger: 'blur' }],
   templateId: [{ required: true, message: t('system.id'), trigger: 'blur' }],
 }
 
-const dataForm = ref()
-const sendForm = ref()
-const templateForm = ref()
+const dataForm = ref<FormInstance | undefined>()
+const sendForm = ref<FormInstance | undefined>()
+const templateForm = ref<FormInstance | undefined>()
 
 // 模板内容映射
 const templateVariablePrefix = '$'
-const templateContentMap = computed(() => ({
+const templateContentMap = computed<Record<string, string>>(() => ({
   verify_code: t('system.sms_template_verify_code', { prefix: templateVariablePrefix }),
   login_notify: t('system.sms_template_login_notify', { prefix: templateVariablePrefix }),
   alarm_notify: t('system.sms_template_alarm_notify', { prefix: templateVariablePrefix }),
   device_offline: t('system.sms_template_device_offline', { prefix: templateVariablePrefix }),
   system_notify: t('system.sms_template_system_notify', { prefix: templateVariablePrefix }),
 }))
+
+/**
+ * 表单 → 短信配置载荷。
+ *
+ * 表单初始态 supplier 为空字符串，而接口要求 SmsSupplier 枚举；
+ * 提交前 el-form 的必填校验已保证 supplier 为合法枚举值，
+ * 因此这里只做类型层面的转换，运行时请求体与改造前完全一致。
+ */
+function toConfigPayload(form: SmsConfigForm): SmsConfigAddQuery {
+  return form as unknown as SmsConfigAddQuery
+}
+
+/**
+ * 表单 → 短信模板类型。
+ *
+ * ⚠️ 前后端契约不一致：后端 `SmsTemplateType` 只有 alarm_notify / verify_code，
+ * 而字典接口 /dict/sms-template-type 实际返回的类型更多（见 templateContentMap）。
+ * 提交时保持前端实际选择到的值不变。
+ */
+function toTemplateType(value: string): SmsTemplateType {
+  return value as unknown as SmsTemplateType
+}
 
 async function getList() {
   listLoading.value = true
@@ -114,17 +233,17 @@ async function getSuppliers() {
 
 async function getTemplateTypes() {
   const response = await getSmsTemplateType()
-  templateTypes.value = response.data
+  templateTypes.value = response.data as DictEnumItemWithDesc[]
 }
 
-function getSupplierName(code) {
+function getSupplierName(code: string): string {
   const supplier = suppliers.value.find(s => s.code === code)
   return supplier ? supplier.name : code
 }
 
-function getTemplateTypeName(code) {
+function getTemplateTypeName(code: string): string {
   const type = templateTypes.value.find(t => t.code === code)
-  return type ? type.desc : code
+  return type ? (type.desc as string) : code
 }
 
 function handleFilter() {
@@ -161,14 +280,14 @@ function handleCreate() {
 async function createData() {
   const valid = await dataForm.value?.validate()
   if (valid) {
-    await addSmsConfig(temp)
+    await addSmsConfig(toConfigPayload(temp))
     dialogFormVisible.value = false
     ElMessage.success(t('system.created_successfully'))
     getList()
   }
 }
 
-function handleUpdate(row) {
+function handleUpdate(row: SmsConfig) {
   Object.assign(temp, row)
   if (!temp.configJson) {
     temp.configJson = {}
@@ -183,14 +302,14 @@ function handleUpdate(row) {
 async function updateData() {
   const valid = await dataForm.value?.validate()
   if (valid) {
-    await updateSmsConfig(temp)
+    await updateSmsConfig(toConfigPayload(temp) as unknown as SmsConfigUpdateQuery)
     dialogFormVisible.value = false
     ElMessage.success(t('system.updated_successfully_2'))
     getList()
   }
 }
 
-async function handleDelete(row) {
+async function handleDelete(row: SmsConfig) {
   await ElMessageBox.confirm(t('system.sms_this_operation_will_permanently_delete_configuration_continue'), t('common.tip'), {
     confirmButtonText: t('common.confirm'),
     cancelButtonText: t('common.cancel'),
@@ -201,25 +320,25 @@ async function handleDelete(row) {
   getList()
 }
 
-async function handleSetDefault(row) {
+async function handleSetDefault(row: SmsConfig) {
   await setDefaultConfig(row.id)
   ElMessage.success(t('system.default_config_set_successfully_2'))
   getList()
 }
 
-async function handleStatusChange(row) {
-  await updateConfigStatus(row.id, row.status)
+async function handleStatusChange(row: SmsConfig) {
+  await updateConfigStatus(row.id, row.status as number)
   ElMessage.success(t('system.status_updated_successfully_2'))
 }
 
-function handleTemplate(row) {
+function handleTemplate(row: SmsConfig) {
   currentConfigId.value = row.id
   templateDialogVisible.value = true
   getTemplateList()
 }
 
 async function getTemplateList() {
-  const response = await getSmsTemplateList(currentConfigId.value)
+  const response = await getSmsTemplateList(currentConfigId.value as number)
   templateList.value = response.data
 }
 
@@ -236,7 +355,7 @@ function handleAddTemplate() {
   templateFormVisible.value = true
 }
 
-function handleEditTemplate(row) {
+function handleEditTemplate(row: SmsTemplate) {
   Object.assign(templateTemp, row)
   templateFormTitle.value = t('system.edit_template')
   templateFormVisible.value = true
@@ -252,15 +371,19 @@ function handleTemplateTypeChange() {
 async function saveTemplate() {
   const valid = await templateForm.value?.validate()
   if (valid) {
-    const action = templateTemp.id ? updateSmsTemplate : addSmsTemplate
-    await action(templateTemp)
+    if (templateTemp.id) {
+      await updateSmsTemplate(templateTemp as unknown as SmsTemplateUpdatePayload)
+    }
+    else {
+      await addSmsTemplate(templateTemp as unknown as SmsTemplateAddQuery)
+    }
     templateFormVisible.value = false
     ElMessage.success(t('system.saved_successfully'))
     getTemplateList()
   }
 }
 
-async function handleDeleteTemplate(row) {
+async function handleDeleteTemplate(row: SmsTemplate) {
   await ElMessageBox.confirm(t('system.this_operation_will_permanently_delete_template_continue'), t('common.tip'), {
     confirmButtonText: t('common.confirm'),
     cancelButtonText: t('common.cancel'),
@@ -283,10 +406,10 @@ async function sendSmsMessage() {
       await sendSms(data)
     }
     else {
-      let templateParams = {}
+      let templateParams: Record<string, unknown> = {}
       if (sendTemp.templateParamsStr) {
         try {
-          templateParams = JSON.parse(sendTemp.templateParamsStr)
+          templateParams = JSON.parse(sendTemp.templateParamsStr) as Record<string, unknown>
         }
         catch {
           ElMessage.error(t('system.template_parameter_format_error'))
@@ -295,7 +418,7 @@ async function sendSmsMessage() {
       }
       const data = {
         phone: sendTemp.phone,
-        templateType: sendTemp.templateType,
+        templateType: toTemplateType(sendTemp.templateType),
         templateParams,
         configId: sendTemp.configId,
       }
@@ -310,7 +433,7 @@ getList()
 getSuppliers()
 getTemplateTypes()
 
-const configColumns = computed(() => [
+const configColumns = computed<TableColumn<SmsConfig>[]>(() => [
   { prop: 'id', label: 'ID', width: 95, align: 'center' },
   { prop: 'name', label: t('push_config.config_name'), slot: 'name' },
   { prop: 'supplier', label: t('system.provider'), width: 110, align: 'center', render: ({ row }) => getSupplierName(row.supplier) },
@@ -319,7 +442,7 @@ const configColumns = computed(() => [
   { prop: 'cz', slot: 'cz', label: t('common.operation'), align: 'center', width: 280 },
 ])
 
-const templateColumns = computed(() => [
+const templateColumns = computed<TableColumn<SmsTemplate>[]>(() => [
   { prop: 'templateType', label: t('system.template_type'), width: 120, render: ({ row }) => getTemplateTypeName(row.templateType) },
   { prop: 'templateName', label: t('system.template_name') },
   { prop: 'templateId', label: t('system.template_id') },
@@ -350,41 +473,41 @@ const templateColumns = computed(() => [
             </el-button>
           </div>
 
-        <IotTable
-          :columns="configColumns"
-          :data="list"
-          :loading="listLoading"
-          :is-page="false"
-        >
-          <template #name="{ row }">
-            {{ row.name }}
-            <el-tag v-if="row.isDefault" type="success" size="small">
-              {{ t('system.default_2') }}
-            </el-tag>
-          </template>
-          <template #status="{ row }">
-            <el-switch
-              v-model="row.status"
-              :active-value="1"
-              :inactive-value="2"
-              @change="handleStatusChange(row)"
-            />
-          </template>
-          <template #cz="{ row }">
-            <el-button type="primary" size="small" @click="handleUpdate(row)">
-              {{ t('common.edit') }}
-            </el-button>
-            <el-button type="info" size="small" @click="handleTemplate(row)">
-              {{ t('system.template') }}
-            </el-button>
-            <el-button v-if="!row.isDefault" type="success" size="small" @click="handleSetDefault(row)">
-              {{ t('system.set_default_2') }}
-            </el-button>
-            <el-button v-if="!row.isDefault" size="small" type="danger" @click="handleDelete(row)">
-              {{ t('common.delete') }}
-            </el-button>
-          </template>
-        </IotTable>
+          <IotTable
+            :columns="configColumns"
+            :data="list"
+            :loading="listLoading"
+            :is-page="false"
+          >
+            <template #name="{ row }">
+              {{ row.name }}
+              <el-tag v-if="row.isDefault" type="success" size="small">
+                {{ t('system.default_2') }}
+              </el-tag>
+            </template>
+            <template #status="{ row }">
+              <el-switch
+                v-model="row.status"
+                :active-value="1"
+                :inactive-value="2"
+                @change="handleStatusChange(row)"
+              />
+            </template>
+            <template #cz="{ row }">
+              <el-button type="primary" size="small" @click="handleUpdate(row)">
+                {{ t('common.edit') }}
+              </el-button>
+              <el-button type="info" size="small" @click="handleTemplate(row)">
+                {{ t('system.template') }}
+              </el-button>
+              <el-button v-if="!row.isDefault" type="success" size="small" @click="handleSetDefault(row)">
+                {{ t('system.set_default_2') }}
+              </el-button>
+              <el-button v-if="!row.isDefault" size="small" type="danger" @click="handleDelete(row)">
+                {{ t('common.delete') }}
+              </el-button>
+            </template>
+          </IotTable>
         </div>
       </el-tab-pane>
 

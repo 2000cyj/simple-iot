@@ -1,9 +1,11 @@
-<script setup>
+<script setup lang="ts">
+import type { IconQuery } from '@/api/index'
+import type { Icon } from '@/types/api'
 import { Delete, Edit, Loading, RefreshRight } from '@element-plus/icons-vue'
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { iconDeleteApi, iconListApi } from '@/api/index.js'
-import { useTable } from '@/composables/useTable.js'
+import { iconDeleteApi, iconListApi } from '@/api/index'
+import { useTable } from '@/composables/useTable'
 import EditDia from '@/views/system/icon/widget/editDia.vue'
 
 const { t } = useI18n()
@@ -20,9 +22,11 @@ const {
   onEdit,
   diaTitle,
   currentItem,
-} = useTable({
-  deleteApi: iconDeleteApi,
-  fetchApi: iconListApi,
+} = useTable<Icon>({
+  // useTable 的 deleteApi 允许传 id 或整行，这里后端只接受数字 id
+  deleteApi: id => iconDeleteApi(id as number),
+  // useTable 的 fetchApi 入参是通用查询对象，这里按后端图标查询收窄
+  fetchApi: params => iconListApi(params as IconQuery),
   diaName: t('system.icon_icon'),
   defParams: {},
 })

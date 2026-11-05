@@ -30,7 +30,7 @@ export type { NormalizedPage } from '@/utils/page'
  * - `fetchApi` 列表 / 分页接口，返回 BaseResult 包裹的分页载荷或列表。
  */
 export interface UseTableOptions<T extends object = TableRowData> {
-  deleteApi?: (id: number | string) => Promise<unknown>
+  deleteApi?: (id: number) => Promise<unknown>
   fetchApi?: (params: Record<string, unknown>) => Promise<BaseResult<PageResult<T>> | BaseResult<T[]>>
   defParams?: Record<string, unknown>
   pageSize?: number
@@ -237,7 +237,7 @@ export function useTable<T extends object = TableRowData>(options: UseTableOptio
       )
 
       // 历史接口允许直接传整行对象，故 id 缺失时回退为整行
-      const target = (readRowId(row) || row) as number | string
+      const target = (readRowId(row) || row) as number
       await deleteApi(target)
       ElMessage.success('删除成功')
       updatePage()

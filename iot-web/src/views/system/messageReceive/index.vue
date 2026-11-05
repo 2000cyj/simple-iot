@@ -1,14 +1,28 @@
-<script setup>
+<script setup lang="ts">
+import type { MessageReceive, MessageRecivePageQuery, NotifyType } from '@/types/api'
 import { Delete, Edit, RefreshRight } from '@element-plus/icons-vue'
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { messageReceiveDeleteApi, messageReceivePageApi } from '@/api/index.js'
+import { messageReceiveDeleteApi, messageReceivePageApi } from '@/api/index'
 import IotTable from '@/components/IotTable.vue'
-import { useTable } from '@/composables/useTable.js'
+import { useTable } from '@/composables/useTable'
 import EditDia from '@/views/system/messageReceive/widget/editDia.vue'
 
+/** 表格列配置 */
+interface TableColumn {
+  prop?: string
+  label?: string
+  width?: number
+  minWidth?: number
+  align?: 'left' | 'center' | 'right'
+  slot?: string
+  fixed?: 'left' | 'right' | boolean
+  showOverflowTooltip?: boolean
+  render?: (scope: { row: MessageReceive }) => string | undefined
+}
+
 const { t } = useI18n()
-const notifyTypeOpt = [
+const notifyTypeOpt: Array<{ label: string, value: NotifyType }> = [
   {
     label: t('system.email_2'),
     value: 1,
@@ -19,7 +33,7 @@ const notifyTypeOpt = [
   },
 ]
 
-const column = [
+const column: TableColumn[] = [
   {
     prop: 'name',
     label: t('system.system_messagereceive_page'),
@@ -27,7 +41,7 @@ const column = [
   {
     prop: 'notifyType',
     label: t('system.notification_type'),
-    render({ row }) {
+    render({ row }: { row: MessageReceive }) {
       return notifyTypeOpt
         .find(item => item.value === row.notifyType)
         ?.label || '-'
@@ -65,9 +79,11 @@ const {
   currentItem,
   onPageChange,
   onSizeChange,
-} = useTable({
-  deleteApi: messageReceiveDeleteApi,
-  fetchApi: messageReceivePageApi,
+} = useTable<MessageReceive>({
+  // useTable 的 deleteApi 允许传 id 或整行，这里后端只接受数字 id
+  deleteApi: id => messageReceiveDeleteApi(id as number),
+  // useTable 的 fetchApi 入参是通用查询对象，这里按后端分页查询收窄
+  fetchApi: params => messageReceivePageApi(params as unknown as MessageRecivePageQuery),
   diaName: t('system.notifications'),
   defParams: {},
 })

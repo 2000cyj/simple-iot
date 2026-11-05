@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { FormInstance, FormRules } from 'element-plus'
+import type { EmailConfig, EmailConfigUpdateQuery } from '@/types/api'
 import { Message, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, nextTick, reactive, ref } from 'vue'
@@ -14,18 +16,57 @@ import {
 } from '@/api/email'
 import IotTable from '@/components/IotTable.vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { normalizePage } from '@/utils/page.js'
+import { normalizePage } from '@/utils/page'
+
+/** 邮箱配置表单 */
+interface EmailConfigForm {
+  /** 配置 ID（新增时为空） */
+  id?: number
+  /** 配置名称 */
+  name: string
+  /** SMTP 服务器 */
+  host: string
+  /** SMTP 端口 */
+  port: number
+  /** 发件人邮箱 */
+  username: string
+  /** 邮箱密码 / 授权码 */
+  password: string
+  /** 协议 */
+  protocol: string
+  /** 编码 */
+  encoding: string
+  /** 是否启用 SSL */
+  sslEnabled: boolean
+  /** 状态：1 启用 2 禁用 */
+  status?: number
+}
+
+/** 表格列配置 */
+interface TableColumn {
+  prop?: string
+  label?: string
+  width?: number
+  minWidth?: number
+  align?: 'left' | 'center' | 'right'
+  slot?: string
+  fixed?: 'left' | 'right' | boolean
+  showOverflowTooltip?: boolean
+}
 
 const { t } = useI18n()
 const listLoading = ref(true)
-const list = ref([])
+const list = ref<EmailConfig[]>([])
 
-const listQuery = reactive({
+const listQuery = reactive<{
+  name?: string
+  status?: number
+}>({
   name: undefined,
   status: undefined,
 })
 
-const temp = reactive({
+const temp = reactive<EmailConfigForm>({
   id: undefined,
   name: '',
   host: '',
@@ -37,7 +78,10 @@ const temp = reactive({
   sslEnabled: true,
 })
 
-const testEmailTemp = reactive({
+const testEmailTemp = reactive<{
+  to: string
+  configId?: number
+}>({
   to: '',
   configId: undefined,
 })
@@ -46,12 +90,12 @@ const dialogFormVisible = ref(false)
 const testDialogVisible = ref(false)
 const dialogStatus = ref('')
 
-const textMap = {
+const textMap: Record<string, string> = {
   update: t('common.edit'),
   create: t('system.create'),
 }
 
-const rules = {
+const rules: FormRules = {
   name: [{ required: true, message: t('system.config_name_required'), trigger: 'blur' }],
   host: [{ required: true, message: t('system.smtp'), trigger: 'blur' }],
   port: [{ required: true, message: t('system.email_smtp'), trigger: 'blur' }],
@@ -62,15 +106,15 @@ const rules = {
   password: [{ required: true, message: t('system.email_password_required'), trigger: 'blur' }],
 }
 
-const testRules = {
+const testRules: FormRules = {
   to: [
     { required: true, message: t('system.email_system_email_page'), trigger: 'blur' },
     { type: 'email', message: t('system.invalid_email'), trigger: 'blur' },
   ],
 }
 
-const dataForm = ref()
-const testForm = ref()
+const dataForm = ref<FormInstance | undefined>()
+const testForm = ref<FormInstance | undefined>()
 
 async function getList() {
   listLoading.value = true
@@ -125,7 +169,7 @@ async function createData() {
   }
 }
 
-function handleUpdate(row) {
+function handleUpdate(row: EmailConfig) {
   Object.assign(temp, {
     ...row,
     password: '', // Hide password while editing
@@ -140,7 +184,9 @@ function handleUpdate(row) {
 async function updateData() {
   const valid = await dataForm.value?.validate()
   if (valid) {
-    const data = { ...temp }
+    // 后端修改接口允许不传密码（表示不改动），
+    // 表单里 password 为空时删掉该字段；其余字段原样提交。
+    const data = { ...temp } as EmailConfigUpdateQuery
     if (!data.password) {
       delete data.password
     }
@@ -151,7 +197,7 @@ async function updateData() {
   }
 }
 
-async function handleDelete(row) {
+async function handleDelete(row: EmailConfig) {
   if (row.isDefault) {
     ElMessage.warning(t('system.default_config_cannot_deleted'))
     return
@@ -166,18 +212,18 @@ async function handleDelete(row) {
   getList()
 }
 
-async function handleSetDefault(row) {
+async function handleSetDefault(row: EmailConfig) {
   await setDefaultEmailConfig(row.id)
   ElMessage.success(t('system.default_config_set_successfully'))
   getList()
 }
 
-async function handleStatusChange(row) {
-  await updateEmailConfigStatus(row.id, row.status)
+async function handleStatusChange(row: EmailConfig) {
+  await updateEmailConfigStatus(row.id, row.status as number)
   ElMessage.success(t('system.status_updated_successfully'))
 }
 
-function handleTestEmail(row) {
+function handleTestEmail(row: EmailConfig) {
   testEmailTemp.configId = row.id
   testEmailTemp.to = ''
   testDialogVisible.value = true
@@ -201,7 +247,7 @@ async function sendTestEmailMessage() {
 // 初始化
 getList()
 
-const columns = computed(() => [
+const columns = computed<TableColumn[]>(() => [
   { prop: 'id', label: 'ID', width: 80, align: 'center' },
   { prop: 'name', label: t('push_config.config_name'), slot: 'name' },
   { prop: 'host', label: t('system.smtp_server') },
