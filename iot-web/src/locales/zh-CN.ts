@@ -1,4 +1,6 @@
-export default {
+export type LocaleMessages = Record<string, unknown>
+
+const messages: LocaleMessages = {
   access_key: '访问密钥',
   access_key_required: '访问密钥必填',
   access_mode_2: '访问权限',
@@ -1905,3 +1907,5 @@ export default {
   you_sure_you_want_delete_this_driver: '确定要删除该驱动吗？',
   you_sure_you_want_delete_this_service: '确定要删除服务吗?',
 }
+
+export default messages

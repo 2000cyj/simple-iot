@@ -1,3 +1,5 @@
+import type { Component } from 'vue'
+import type { RouteRecordRaw } from 'vue-router'
 // Element Plus 图标
 import {
   Bell,
@@ -16,20 +18,39 @@ import {
   UploadFilled,
   Warning,
 } from '@element-plus/icons-vue'
-import layout from '@/layout'
+import layout from '@/layout/index.vue'
 
-const home = () => import('@/views/home')
-const productType = () => import('@/views/productType')
-const protocol = () => import('@/views/protocol')
-const product = () => import('@/views/product')
-const device = () => import('@/views/device')
+/**
+ * 路由 meta 的自定义字段。
+ *
+ * vue-router 的 `RouteMeta` 默认为空接口，需要通过模块扩展才能携带
+ * `title` / `icon` 等业务字段。放在本文件里，随路由表一起生效。
+ */
+declare module 'vue-router' {
+  interface RouteMeta {
+    /** 菜单标题（中文兜底文案） */
+    title?: string
+    /** 菜单标题的 i18n key，优先于 title 使用 */
+    i18nKey?: string
+    /** 菜单图标组件 */
+    icon?: Component
+    /** 是否在菜单中隐藏 */
+    hidden?: boolean
+  }
+}
+
+const home = () => import('@/views/home/index.vue')
+const productType = () => import('@/views/productType/index.vue')
+const protocol = () => import('@/views/protocol/index.vue')
+const product = () => import('@/views/product/index.vue')
+const device = () => import('@/views/device/index.vue')
 const deviceGroup = () => import('@/views/device-group/index.vue')
-const tslModel = () => import('@/views/tslModel')
+const tslModel = () => import('@/views/tslModel/index.vue')
 const deviceDetails = () => import('@/views/device/widget/details.vue')
-const icon = () => import('@/views/system/icon')
-const sms = () => import('@/views/system/sms')
-const email = () => import('@/views/system/email')
-const messageReceive = () => import('@/views/system/messageReceive')
+const icon = () => import('@/views/system/icon/index.vue')
+const sms = () => import('@/views/system/sms/index.vue')
+const email = () => import('@/views/system/email/index.vue')
+const messageReceive = () => import('@/views/system/messageReceive/index.vue')
 const pushConfig = () => import('@/views/push-config/index.vue')
 const driver = () => import('@/views/driver/index.vue')
 const ruleChain = () => import('@/views/rule-chain/index.vue')
@@ -42,7 +63,7 @@ const modbus = () => import('@/views/modbus/index.vue')
 const webhook = () => import('@/views/webhook/index.vue')
 const imPush = () => import('@/views/im-push/index.vue')
 
-export default [
+const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'layout',
@@ -373,3 +394,5 @@ export default [
     ],
   },
 ]
+
+export default routes
