@@ -1,20 +1,82 @@
-<script setup>
-import { Lightning } from '@element-plus/icons-vue'
+<script setup lang="ts">
+import type { FormInstance, FormRules } from 'element-plus'
+import type { DictEnumItem } from '@/api/dict'
+import type { DriverPayload } from '@/api/driver'
+import type { ConnectionTypeEnum, Driver, DriverTypeEnum } from '@/types/api'
+import { Lightning, Plus, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getConnectionTypeEnum, getDriverTypeEnum } from '@/api/dict'
 import { addDriver, deleteDriver, getDriverList, updateDriver } from '@/api/driver'
-import PageHeader from '@/components/PageHeader.vue'
 import IotTable from '@/components/IotTable.vue'
-import { Plus, Refresh } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
+
+/**
+ * IotTable 的列配置（最小结构）。
+ *
+ * IotTable 组件正在由其它 agent 并行改造，其 props 类型尚未定稿，
+ * 这里按本页面实际用到的字段声明一份本地结构。
+ */
+interface TableColumn<TRow> {
+  /** 列字段名 */
+  prop?: string
+  /** 列标题 */
+  label?: string
+  /** 列宽 */
+  width?: number
+  /** 最小列宽 */
+  minWidth?: number
+  /** 固定方式 */
+  fixed?: boolean | string
+  /** 对齐方式 */
+  align?: string
+  /** 自定义插槽名 */
+  slot?: string
+  /** 列类型 */
+  type?: string
+  /** 自定义渲染 */
+  render?: (scope: { row: TRow }) => unknown
+}
+
+/** 驱动表单模型（新增 / 编辑共用） */
+interface DriverFormModel {
+  /** 驱动名称 */
+  name: string
+  /** 驱动类型 */
+  type: DriverTypeEnum
+  /** 连接类型 */
+  connectionType: ConnectionTypeEnum
+}
+
+/** 驱动表单（后端实体字段除 driverId 外均可为空） */
+interface DriverForm {
+  /** 驱动 ID */
+  driverId?: number
+  /** 驱动名称 */
+  name?: string
+  /** 驱动类型 */
+  type?: DriverTypeEnum
+  /** 驱动描述 */
+  description?: string
+  /** 连接类型 */
+  connectionType?: ConnectionTypeEnum
+  /** 驱动 JAR 路径 */
+  jarPath?: string
+  /** 是否为默认驱动 */
+  isDefault?: boolean
+  /** 状态：1 启用 0 禁用 */
+  status?: number
+  /** 驱动监听端口 */
+  port?: number | null
+}
 
 const { t } = useI18n()
-const driverList = ref([])
+const driverList = ref<Driver[]>([])
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
-const form = ref({})
-const formRules = ref({
+const form = ref<DriverForm>({})
+const formRules = ref<FormRules<DriverFormModel>>({
   name: [
     { required: true, message: t('driver.driver_page'), trigger: 'blur' },
   ],
@@ -25,9 +87,9 @@ const formRules = ref({
     { required: true, message: t('driver.select_connection_type'), trigger: 'change' },
   ],
 })
-const driverTypeOptions = ref([])
-const connectionTypeOptions = ref([])
-const formRef = ref()
+const driverTypeOptions = ref<DictEnumItem[]>([])
+const connectionTypeOptions = ref<DictEnumItem[]>([])
+const formRef = ref<FormInstance | null>(null)
 
 function fetchList() {
   getDriverList().then((res) => {
@@ -43,14 +105,14 @@ function handleAdd() {
   dialogVisible.value = true
 }
 
-function handleEdit(row) {
+function handleEdit(row: Driver) {
   dialogTitle.value = t('driver.edit_driver')
   form.value = { ...row, port: row.port || null }
   dialogVisible.value = true
 }
 
 function handleSave() {
-  formRef.value.validate((valid) => {
+  formRef.value!.validate((valid) => {
     if (!valid)
       return
 
@@ -66,8 +128,10 @@ function handleSave() {
       return
     }
 
+    // 表单允许字段缺省（新增场景未填名称等），
+    // 而后端实体类型要求 name / type / connectionType 必填，这里按原有提交形态做一次类型断言。
     if (form.value.driverId) {
-      updateDriver(form.value).then(() => {
+      updateDriver(form.value as DriverPayload).then(() => {
         ElMessage.success(t('driver.update_success'))
         dialogVisible.value = false
         form.value = {}
@@ -77,7 +141,7 @@ function handleSave() {
       })
     }
     else {
-      addDriver(form.value).then(() => {
+      addDriver(form.value as DriverPayload).then(() => {
         ElMessage.success(t('driver.create_success'))
         dialogVisible.value = false
         form.value = {}
@@ -89,7 +153,7 @@ function handleSave() {
   })
 }
 
-function handleDelete(row) {
+function handleDelete(row: Driver) {
   ElMessageBox.confirm(t('driver.you_sure_you_want_delete_this_driver'), t('common.tip'), {
     type: 'warning',
   }).then(() => {
@@ -127,7 +191,7 @@ watch(dialogVisible, (visible) => {
   }
 })
 
-const columns = computed(() => [
+const columns = computed<TableColumn<Driver>[]>(() => [
   { prop: 'driverId', label: 'ID', width: 80 },
   { prop: 'name', label: t('driver.driver_name') },
   { prop: 'type', label: t('common.type'), slot: 'type' },

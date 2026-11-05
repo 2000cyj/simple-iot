@@ -1,10 +1,12 @@
-<script setup>
+<script setup lang="ts">
 /**
  * 设备分组管理 - 左树右列表布局
  * 左侧: 分组树（点击选中展示右侧设备列表）
  * 右侧: 已分配设备表格 + 穿梭框分配
  * 底部: 标签管理区
  */
+import type { DeviceGroupPayload, DeviceTagPayload } from '@/api/deviceGroup'
+import type { Device, DeviceGroup, DeviceTag } from '@/types/api'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -22,42 +24,117 @@ import {
   deviceTagDevicesApi,
   deviceTagEditApi,
 } from '@/api/deviceGroup'
-import IotTable from '@/components/IotTable.vue'
 import { deviceListApi } from '@/api/index'
+import IotTable from '@/components/IotTable.vue'
+
+/**
+ * IotTable 的列配置（最小结构）。
+ *
+ * IotTable 组件正在由其它 agent 并行改造，其 props 类型尚未定稿，
+ * 这里按本页面实际用到的字段声明一份本地结构。
+ */
+interface TableColumn<TRow> {
+  /** 列字段名 */
+  prop?: string
+  /** 列标题 */
+  label?: string
+  /** 列宽 */
+  width?: number
+  /** 最小列宽 */
+  minWidth?: number
+  /** 固定方式 */
+  fixed?: boolean | string
+  /** 对齐方式 */
+  align?: string
+  /** 自定义插槽名 */
+  slot?: string
+  /** 列类型 */
+  type?: string
+  /** 自定义渲染 */
+  render?: (scope: { row: TRow }) => unknown
+}
+
+/** 设备分组树节点（树接口在分组实体上追加 children 字段） */
+interface DeviceGroupNode extends DeviceGroup {
+  /** 子分组 */
+  children?: DeviceGroupNode[]
+}
+
+/** 分组表单（新增 / 编辑共用） */
+interface GroupForm {
+  /** 分组 ID */
+  id?: number
+  /** 分组名称 */
+  name: string
+  /** 父分组 ID，-1 = 根 */
+  parentId: number
+  /** 描述 */
+  description?: string
+  /** 创建时间（回填时原样带回） */
+  createTime?: string
+  /** 更新时间（回填时原样带回） */
+  updateTime?: string
+  /** 子分组（回填时原样带回） */
+  children?: DeviceGroupNode[]
+}
+
+/** 标签表单（新增 / 编辑共用） */
+interface TagForm {
+  /** 标签 ID */
+  id?: number
+  /** 标签名称 */
+  name: string
+  /** 标签颜色 */
+  color?: string
+  /** 创建时间（回填时原样带回） */
+  createTime?: string
+  /** 更新时间（回填时原样带回） */
+  updateTime?: string
+}
+
+/** 穿梭框候选项 */
+interface TransferDeviceOption {
+  /** 设备 ID */
+  key: number
+  /** 展示文本 */
+  label: string
+  /** 在线状态 */
+  online?: boolean
+}
 
 const { t } = useI18n()
 
 // === Group ===
-const groupTree = ref([])
+const groupTree = ref<DeviceGroupNode[]>([])
 const groupLoading = ref(false)
-const selectedGroupId = ref(null)
-const selectedGroupNode = ref(null)
+const selectedGroupId = ref<number | null>(null)
+const selectedGroupNode = ref<DeviceGroupNode | null>(null)
 
 // === Device List (right panel) ===
-const assignedDevices = ref([])
+const assignedDevices = ref<Device[]>([])
 const assignedLoading = ref(false)
 
 // === Transfer dialog ===
 const transferVisible = ref(false)
 const transferTitle = ref('')
-const transferAllDevices = ref([])
-const transferValue = ref([]) // selected device ids
-const transferType = ref('group') // 'group' | 'tag'
-const transferTargetId = ref(null)
+const transferAllDevices = ref<TransferDeviceOption[]>([])
+const transferValue = ref<number[]>([]) // selected device ids
+const transferType = ref<'group' | 'tag'>('group') // 'group' | 'tag'
+const transferTargetId = ref<number | null>(null)
 const transferLoading = ref(false)
 
 // === Group Dialog ===
 const groupDialogVisible = ref(false)
-const groupForm = ref({ name: '', parentId: -1, description: '' })
+const groupForm = ref<GroupForm>({ name: '', parentId: -1, description: '' })
 const editingGroup = ref(false)
 
 // === Tag ===
-const tags = ref([])
+const tags = ref<DeviceTag[]>([])
 const tagLoading = ref(false)
 const tagDialogVisible = ref(false)
-const tagForm = ref({ name: '', color: '#6366f1' })
+const tagForm = ref<TagForm>({ name: '', color: '#6366f1' })
 const editingTag = ref(false)
-const selectedTagId = ref(null)
+const selectedTagId = ref<number | null>(null)
 
 async function loadGroups() {
   groupLoading.value = true
@@ -96,7 +173,7 @@ async function loadAssignedDevices() {
   }
 }
 
-async function loadTagDevices(tagId) {
+async function loadTagDevices(tagId: number) {
   selectedTagId.value = tagId
   assignedLoading.value = true
   try {
@@ -108,14 +185,14 @@ async function loadTagDevices(tagId) {
   }
 }
 
-function onGroupClick(node) {
+function onGroupClick(node: DeviceGroupNode) {
   selectedGroupId.value = node.id
   selectedGroupNode.value = node
   selectedTagId.value = null
   loadAssignedDevices()
 }
 
-function onTagClick(tag) {
+function onTagClick(tag: DeviceTag) {
   selectedTagId.value = tag.id
   selectedGroupId.value = null
   selectedGroupNode.value = null
@@ -129,7 +206,7 @@ function onAddGroup(parentId = -1) {
   groupDialogVisible.value = true
 }
 
-function onEditGroup(node) {
+function onEditGroup(node: DeviceGroupNode) {
   editingGroup.value = true
   groupForm.value = { ...node }
   groupDialogVisible.value = true
@@ -140,16 +217,18 @@ async function onSubmitGroup() {
     ElMessage.warning(t('validate.nameRequired'))
     return
   }
+  // 表单允许 id 缺省（新增场景），而后端实体类型要求 id 必填，
+  // 这里按原有提交形态做一次类型断言。
   if (editingGroup.value)
-    await deviceGroupEditApi(groupForm.value)
+    await deviceGroupEditApi(groupForm.value as DeviceGroupPayload)
   else
-    await deviceGroupAddApi(groupForm.value)
+    await deviceGroupAddApi(groupForm.value as DeviceGroupPayload)
   ElMessage.success(t('common.success'))
   groupDialogVisible.value = false
   loadGroups()
 }
 
-async function onDeleteGroup(node) {
+async function onDeleteGroup(node: DeviceGroupNode) {
   await ElMessageBox.confirm(t('deviceGroup.deleteConfirm'), t('common.confirm'), { type: 'warning' })
   await deviceGroupDelApi(node.id)
   ElMessage.success(t('common.success'))
@@ -167,7 +246,7 @@ function onAddTag() {
   tagDialogVisible.value = true
 }
 
-function onEditTag(tag) {
+function onEditTag(tag: DeviceTag) {
   editingTag.value = true
   tagForm.value = { ...tag }
   tagDialogVisible.value = true
@@ -178,16 +257,18 @@ async function onSubmitTag() {
     ElMessage.warning(t('validate.nameRequired'))
     return
   }
+  // 表单允许 id 缺省（新增场景），而后端实体类型要求 id 必填，
+  // 这里按原有提交形态做一次类型断言。
   if (editingTag.value)
-    await deviceTagEditApi(tagForm.value)
+    await deviceTagEditApi(tagForm.value as DeviceTagPayload)
   else
-    await deviceTagAddApi(tagForm.value)
+    await deviceTagAddApi(tagForm.value as DeviceTagPayload)
   ElMessage.success(t('common.success'))
   tagDialogVisible.value = false
   loadTags()
 }
 
-async function onDeleteTag(tag) {
+async function onDeleteTag(tag: DeviceTag) {
   await ElMessageBox.confirm(t('deviceTag.deleteConfirm'), t('common.confirm'), { type: 'warning' })
   await deviceTagDelApi(tag.id)
   ElMessage.success(t('common.success'))
@@ -199,18 +280,20 @@ async function onDeleteTag(tag) {
 }
 
 // === Transfer (assign devices) ===
-async function onAssign(type, id, name) {
-  transferType.value = type
+async function onAssign(type: string, id: number | null, name: string) {
+  transferType.value = type === 'tag' ? 'tag' : 'group'
   transferTargetId.value = id
   transferTitle.value = `分配设备 - ${name}`
   transferLoading.value = true
   transferVisible.value = true
 
+  // 打开穿梭框时 id 一定已被赋值（分组或标签二选一）
+  const targetId = id as number
   const [allRes, assignedRes] = await Promise.all([
     deviceListApi(),
     type === 'group'
-      ? deviceGroupDevicesApi(id)
-      : deviceTagDevicesApi(id),
+      ? deviceGroupDevicesApi(targetId)
+      : deviceTagDevicesApi(targetId),
   ])
   transferAllDevices.value = (allRes.data || []).map(d => ({
     key: d.id,
@@ -222,10 +305,12 @@ async function onAssign(type, id, name) {
 }
 
 async function onSubmitTransfer() {
+  // 打开穿梭框时目标 ID 一定已被赋值
+  const targetId = transferTargetId.value as number
   if (transferType.value === 'group')
-    await deviceGroupAssignApi(transferTargetId.value, transferValue.value)
+    await deviceGroupAssignApi(targetId, transferValue.value)
   else
-    await deviceTagAssignApi(transferTargetId.value, transferValue.value)
+    await deviceTagAssignApi(targetId, transferValue.value)
   ElMessage.success(t('common.success'))
   transferVisible.value = false
   // refresh right panel
@@ -235,12 +320,16 @@ async function onSubmitTransfer() {
     loadTagDevices(selectedTagId.value)
 }
 
-function onRemoveDevice(deviceId) {
+function onRemoveDevice(deviceId: number) {
   transferValue.value = assignedDevices.value.map(d => d.id).filter(id => id !== deviceId)
-  if (selectedGroupId.value)
-    deviceGroupAssignApi(selectedGroupId.value, transferValue.value).then(() => loadAssignedDevices())
-  else if (selectedTagId.value)
-    deviceTagAssignApi(selectedTagId.value, transferValue.value).then(() => loadTagDevices(selectedTagId.value))
+  if (selectedGroupId.value) {
+    const groupId = selectedGroupId.value
+    deviceGroupAssignApi(groupId, transferValue.value).then(() => loadAssignedDevices())
+  }
+  else if (selectedTagId.value) {
+    const tagId = selectedTagId.value
+    deviceTagAssignApi(tagId, transferValue.value).then(() => loadTagDevices(tagId))
+  }
 }
 
 onMounted(() => {
@@ -248,7 +337,7 @@ onMounted(() => {
   loadTags()
 })
 
-const assignedColumns = computed(() => [
+const assignedColumns = computed<TableColumn<Device>[]>(() => [
   { prop: 'deviceName', label: '设备名称', minWidth: 120 },
   { prop: 'deviceKey', label: '设备标识', minWidth: 140 },
   { prop: 'online', label: '在线状态', width: 100, slot: 'online' },

@@ -1,4 +1,7 @@
-<script setup>
+<script setup lang="ts">
+import type { UploadFile } from 'element-plus'
+import type { OtaTaskCreateQuery } from '@/api/ota'
+import type { Device, DeviceGroup, Firmware, OtaTask, Product, ProductType } from '@/types/api'
 import { Refresh, Upload, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -7,18 +10,77 @@ import { deviceListApi, productListApi, productTypeListApi } from '@/api/index'
 import { firmwareDeleteApi, firmwareListApi, firmwarePublishApi, firmwareUploadApi, otaTaskCreateApi, otaTaskGetApi, otaTaskListApi } from '@/api/ota'
 import IotTable from '@/components/IotTable.vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { normalizePage } from '@/utils/page.js'
+import { normalizePage } from '@/utils/page'
+
+/**
+ * IotTable 的列配置（最小结构）。
+ *
+ * IotTable 组件正在由其它 agent 并行改造，其 props 类型尚未定稿，
+ * 这里按本页面实际用到的字段声明一份本地结构。
+ */
+interface TableColumn<TRow> {
+  /** 列字段名 */
+  prop?: string
+  /** 列标题 */
+  label?: string
+  /** 列宽 */
+  width?: number
+  /** 最小列宽 */
+  minWidth?: number
+  /** 固定方式 */
+  fixed?: boolean | string
+  /** 对齐方式 */
+  align?: string
+  /** 自定义插槽名 */
+  slot?: string
+  /** 列类型 */
+  type?: string
+  /** 自定义渲染 */
+  render?: (scope: { row: TRow }) => unknown
+}
+
+/** 固件上传表单 */
+interface FirmwareUploadForm {
+  /** 产品 ID */
+  productId: number | null
+  /** 固件名称 */
+  name: string
+  /** 版本号 */
+  version: string
+  /** 描述 */
+  description: string
+  /** 待上传的固件文件 */
+  file: File | null
+}
+
+/** 升级任务表单 */
+interface OtaTaskForm {
+  /** 固件 ID */
+  firmwareId: number | null
+  /** 目标分组 ID */
+  groupId: number | null
+  /** 指定设备 ID 列表 */
+  deviceIds: number[]
+}
+
+/** 升级任务进度行（由 taskDetail.progress 的键值对展开得到） */
+interface ProgressRow {
+  /** 设备 ID */
+  deviceId: string
+  /** 升级结果描述 */
+  status: string
+}
 
 const activeTab = ref('firmware')
 const loading = ref(false)
 
 // === Firmware ===
-const firmwareList = ref([])
+const firmwareList = ref<Firmware[]>([])
 const uploadVisible = ref(false)
-const uploadForm = ref({ productId: null, name: '', version: '', description: '', file: null })
-const products = ref([])
-const productTypes = ref([])
-const filterProductTypeId = ref(null)
+const uploadForm = ref<FirmwareUploadForm>({ productId: null, name: '', version: '', description: '', file: null })
+const products = ref<Product[]>([])
+const productTypes = ref<ProductType[]>([])
+const filterProductTypeId = ref<number | null>(null)
 
 const filteredProducts = computed(() => {
   if (!filterProductTypeId.value)
@@ -27,13 +89,13 @@ const filteredProducts = computed(() => {
 })
 
 // === Tasks ===
-const taskList = ref([])
+const taskList = ref<OtaTask[]>([])
 const taskDialogVisible = ref(false)
-const taskForm = ref({ firmwareId: null, groupId: null, deviceIds: [] })
+const taskForm = ref<OtaTaskForm>({ firmwareId: null, groupId: null, deviceIds: [] })
 const taskDetailVisible = ref(false)
-const taskDetail = ref(null)
-const groups = ref([])
-const devices = ref([])
+const taskDetail = ref<OtaTask | null>(null)
+const groups = ref<DeviceGroup[]>([])
+const devices = ref<Device[]>([])
 
 async function loadFirmware() {
   loading.value = true
@@ -43,7 +105,9 @@ async function loadFirmware() {
 }
 
 async function loadProducts() {
-  const res = await productListApi()
+  // 原代码此处无参调用，而 productListApi 会解构入参，运行时必然抛 TypeError，
+  // 导致产品下拉恒为空；这里补上空对象参数（与 modbus 页面的调用方式一致）。
+  const res = await productListApi({})
   products.value = res.data || []
 }
 
@@ -58,28 +122,30 @@ async function loadGroups() {
 }
 
 async function loadDevices() {
+  // 历史遗留：后端 GET /device/list 不分页，这里的 page / size 会被忽略
   const res = await deviceListApi({ page: 1, size: 9999 })
   // 存量 bug 修复：deviceListApi 走 GET /device/list，返回 BaseResult<List<Device>>，
   // res.data 是数组、没有 records 字段，原写法 res.data?.records 恒为 undefined，
   // 导致设备下拉恒为空。改用 normalizePage 统一兼容数组与分页对象两种形态。
-  devices.value = normalizePage(res).records
+  devices.value = normalizePage<Device>(res).records
 }
 
-function onUploadFile(file) {
-  uploadForm.value.file = file.raw
+function onUploadFile(file: UploadFile) {
+  uploadForm.value.file = file.raw ?? null
 }
 
 async function onSubmitUpload() {
-  if (!uploadForm.value.productId || !uploadForm.value.name || !uploadForm.value.version || !uploadForm.value.file) {
+  const { productId, name, version, description, file } = uploadForm.value
+  if (!productId || !name || !version || !file) {
     ElMessage.warning('请填写完整信息')
     return
   }
   const formData = new FormData()
-  formData.append('file', uploadForm.value.file)
-  formData.append('productId', uploadForm.value.productId)
-  formData.append('name', uploadForm.value.name)
-  formData.append('version', uploadForm.value.version)
-  formData.append('description', uploadForm.value.description || '')
+  formData.append('file', file)
+  formData.append('productId', String(productId))
+  formData.append('name', name)
+  formData.append('version', version)
+  formData.append('description', description || '')
   await firmwareUploadApi(formData)
   ElMessage.success('上传成功')
   uploadVisible.value = false
@@ -87,14 +153,14 @@ async function onSubmitUpload() {
   loadFirmware()
 }
 
-async function onPublish(id) {
+async function onPublish(id: number) {
   await ElMessageBox.confirm('确认发布该固件?', '提示', { type: 'warning' })
   await firmwarePublishApi(id)
   ElMessage.success('已发布')
   loadFirmware()
 }
 
-async function onDelete(id) {
+async function onDelete(id: number) {
   await ElMessageBox.confirm('确认删除该固件?', '提示', { type: 'warning' })
   await firmwareDeleteApi(id)
   ElMessage.success('已删除')
@@ -109,13 +175,16 @@ async function loadTasks() {
   loading.value = false
 }
 
-function openCreateTask(firmwareId) {
+function openCreateTask(firmwareId: number) {
   taskForm.value = { firmwareId, groupId: null, deviceIds: [] }
   taskDialogVisible.value = true
 }
 
 async function onSubmitTask() {
-  const params = { firmwareId: taskForm.value.firmwareId }
+  const params: OtaTaskCreateQuery = {
+    // 打开弹窗时 firmwareId 一定已被赋值
+    firmwareId: taskForm.value.firmwareId as number,
+  }
   if (taskForm.value.groupId)
     params.groupId = taskForm.value.groupId
   if (taskForm.value.deviceIds.length)
@@ -126,11 +195,11 @@ async function onSubmitTask() {
   loadTasks()
 }
 
-const firmwareName = computed(() => id => firmwareList.value.find(f => f.id === id)?.name || `#${id}`)
+const firmwareName = computed(() => (id: number | null | undefined) => firmwareList.value.find(f => f.id === id)?.name || `#${id}`)
 
-const taskDetailTimer = { current: null }
+const taskDetailTimer: { current: ReturnType<typeof setInterval> | null } = { current: null }
 
-function onTaskDetail(id) {
+function onTaskDetail(id: number) {
   otaTaskGetApi(id).then((res) => {
     taskDetail.value = res.data
     taskDetailVisible.value = true
@@ -142,7 +211,8 @@ function onTaskDetail(id) {
         const r = await otaTaskGetApi(id)
         taskDetail.value = r.data
         if (!r.data || r.data.status !== 'RUNNING') {
-          clearInterval(taskDetailTimer.current)
+          if (taskDetailTimer.current)
+            clearInterval(taskDetailTimer.current)
           taskDetailTimer.current = null
         }
       }, 3000)
@@ -171,7 +241,7 @@ onMounted(() => {
   loadDevices()
 })
 
-const firmwareColumns = computed(() => [
+const firmwareColumns = computed<TableColumn<Firmware>[]>(() => [
   { prop: 'name', label: '名称', minWidth: 120 },
   { prop: 'version', label: '版本', width: 80 },
   { prop: 'productId', label: '产品', width: 120, render: ({ row }) => products.value.find(p => p.id === row.productId)?.model || row.productId },
@@ -181,8 +251,10 @@ const firmwareColumns = computed(() => [
   { prop: 'cz', slot: 'fwCz', label: '操作', width: 200, fixed: 'right' },
 ])
 
-const taskColumns = computed(() => [
-  { prop: 'firmwareId', label: '固件', width: 120, render: ({ row }) => firmwareName(row.firmwareId) },
+const taskColumns = computed<TableColumn<OtaTask>[]>(() => [
+  // 脚本里拿到的是 ComputedRef，必须取 .value 后再调用；
+  // 原代码直接调用 computed 本身，运行时必然抛 “not a function”。
+  { prop: 'firmwareId', label: '固件', width: 120, render: ({ row }) => firmwareName.value(row.firmwareId) },
   { prop: 'status', label: '状态', width: 100, slot: 'taskStatus' },
   { prop: 'total', label: '总数', width: 60 },
   { prop: 'success', label: '成功', width: 60 },
@@ -191,7 +263,7 @@ const taskColumns = computed(() => [
   { prop: 'cz', slot: 'taskCz', label: '操作', width: 100, fixed: 'right' },
 ])
 
-const progressColumns = computed(() => [
+const progressColumns = computed<TableColumn<ProgressRow>[]>(() => [
   { prop: 'deviceId', label: '设备ID', width: 100 },
   { prop: 'status', label: '状态', slot: 'progStatus' },
 ])

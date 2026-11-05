@@ -1,13 +1,14 @@
-<script lang="jsx" setup>
-defineProps({
-  startColor: {
-    type: String,
-    default: '#28aff0',
-  },
-  endColor: {
-    type: String,
-    default: '#120fc4',
-  },
+<script setup lang="ts">
+interface Props {
+  /** 渐变起始色 */
+  startColor?: string
+  /** 渐变结束色 */
+  endColor?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  startColor: '#28aff0',
+  endColor: '#120fc4',
 })
 </script>
 

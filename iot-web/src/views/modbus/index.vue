@@ -1,20 +1,90 @@
-<script setup>
+<script setup lang="ts">
+import type { ModbusConfigPayload } from '@/api/modbus'
+import type { Device, ModbusConfig, Product } from '@/types/api'
+import { Connection, Plus, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { deviceListApi, productListApi } from '@/api/index'
 import { modbusAddApi, modbusDeleteApi, modbusListApi, modbusTestApi, modbusUpdateApi } from '@/api/modbus'
-import PageHeader from '@/components/PageHeader.vue'
 import IotTable from '@/components/IotTable.vue'
-import { Connection, Plus, Refresh } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
+
+/**
+ * IotTable 的列配置（最小结构）。
+ *
+ * IotTable 组件正在由其它 agent 并行改造，其 props 类型尚未定稿，
+ * 这里按本页面实际用到的字段声明一份本地结构。
+ */
+interface TableColumn<TRow> {
+  /** 列字段名 */
+  prop?: string
+  /** 列标题 */
+  label?: string
+  /** 列宽 */
+  width?: number
+  /** 最小列宽 */
+  minWidth?: number
+  /** 固定方式 */
+  fixed?: boolean | string
+  /** 对齐方式 */
+  align?: string
+  /** 自定义插槽名 */
+  slot?: string
+  /** 列类型 */
+  type?: string
+  /** 自定义渲染 */
+  render?: (scope: { row: TRow }) => unknown
+}
+
+/** 寄存器映射项（后端以 JSON 字符串存储，前端解析后使用） */
+interface ModbusRegister {
+  /** 物模型标识符 */
+  identifier?: string
+  /** 功能码 */
+  function?: number
+  /** 起始地址 */
+  address?: number
+  /** 寄存器数 */
+  count?: number
+  /** 数据类型 */
+  dataType?: string
+  /** 缩放系数 */
+  scale?: number
+}
+
+/** 表格行：registerMap 已被解析成数组 */
+interface ModbusRow extends Omit<ModbusConfig, 'registerMap'> {
+  registerMap: ModbusRegister[]
+}
+
+/** 新增 / 编辑表单 */
+interface ModbusForm {
+  /** 配置 ID，新增时为 null */
+  id: number | null
+  /** 设备 ID */
+  deviceId: number | null
+  /** 从站地址 */
+  host: string
+  /** 端口 */
+  port: number
+  /** 单元 ID */
+  unitId: number
+  /** 采集间隔（毫秒） */
+  intervalMs: number
+  /** 是否启用 */
+  enabled: boolean
+  /** 寄存器映射 JSON 文本 */
+  registerMapText: string
+}
 
 const loading = ref(false)
-const list = ref([])
-const products = ref([])
-const devices = ref([])
+const list = ref<ModbusRow[]>([])
+const products = ref<Product[]>([])
+const devices = ref<Device[]>([])
 const dialogVisible = ref(false)
 const editing = ref(false)
 
-const form = reactive({
+const form = reactive<ModbusForm>({
   id: null,
   deviceId: null,
   host: '',
@@ -25,7 +95,7 @@ const form = reactive({
   registerMapText: '[]',
 })
 
-const columns = computed(() => [
+const columns = computed<TableColumn<ModbusRow>[]>(() => [
   {
     prop: 'deviceId',
     label: '设备',
@@ -59,23 +129,26 @@ async function loadData() {
   ])
   list.value = (cfgRes.data || []).map(c => ({
     ...c,
-    registerMap: typeof c.registerMap === 'string' ? JSON.parse(c.registerMap || '[]') : (c.registerMap || []),
+    registerMap: typeof c.registerMap === 'string'
+      ? (JSON.parse(c.registerMap || '[]') as ModbusRegister[])
+      : (c.registerMap || []),
   }))
   products.value = prodRes.data || []
   loading.value = false
 }
 
-async function loadDevices(productId) {
+async function loadDevices(productId?: number) {
   if (productId) {
     const res = await deviceListApi({ productId })
     devices.value = res.data || []
-  } else {
+  }
+  else {
     const res = await deviceListApi({})
     devices.value = res.data || []
   }
 }
 
-function getDeviceName(deviceId) {
+function getDeviceName(deviceId: number | null): string | number | null {
   const d = devices.value.find(d => d.id === deviceId)
   return d ? `${d.deviceName} (${d.deviceKey})` : deviceId
 }
@@ -96,7 +169,7 @@ function onAdd() {
   dialogVisible.value = true
 }
 
-function onEdit(row) {
+function onEdit(row: ModbusRow) {
   editing.value = true
   Object.assign(form, {
     id: row.id,
@@ -113,7 +186,7 @@ function onEdit(row) {
 }
 
 async function onSubmit() {
-  let parsedMap
+  let parsedMap: unknown
   try {
     parsedMap = JSON.parse(form.registerMapText)
   }
@@ -121,6 +194,8 @@ async function onSubmit() {
     ElMessage.error('寄存器映射 JSON 格式错误')
     return
   }
+  // 表单允许 deviceId / id 为空（未选设备、新增场景），
+  // 而后端实体类型要求它们必填，这里按原有提交形态做一次类型断言。
   const payload = {
     id: form.id,
     deviceId: form.deviceId,
@@ -130,7 +205,7 @@ async function onSubmit() {
     intervalMs: form.intervalMs,
     enabled: form.enabled,
     registerMap: JSON.stringify(parsedMap),
-  }
+  } as ModbusConfigPayload
   if (editing.value) {
     await modbusUpdateApi(payload)
   }
@@ -142,14 +217,14 @@ async function onSubmit() {
   loadData()
 }
 
-async function onDelete(id) {
+async function onDelete(id: number) {
   await ElMessageBox.confirm('确认删除此配置?', '提示', { type: 'warning' })
   await modbusDeleteApi(id)
   ElMessage.success('删除成功')
   loadData()
 }
 
-async function onTest(id) {
+async function onTest(id: number) {
   await modbusTestApi(id)
   ElMessage.success('已触发轮询')
 }
@@ -225,7 +300,7 @@ onMounted(loadData)
             v-model="form.registerMapText"
             type="textarea"
             :rows="10"
-            placeholder='[{"identifier":"temperature","function":3,"address":0,"count":1,"dataType":"int16","scale":0.1}]'
+            placeholder="[{&quot;identifier&quot;:&quot;temperature&quot;,&quot;function&quot;:3,&quot;address&quot;:0,&quot;count&quot;:1,&quot;dataType&quot;:&quot;int16&quot;,&quot;scale&quot;:0.1}]"
           />
           <div class="form-tip">
             JSON 数组，每项: identifier(物模型标识符), function(3=保持/4=输入), address(起始地址), count(寄存器数), dataType(int16/int32/float32/float64/bool), scale(缩放系数)

@@ -1,7 +1,10 @@
-<script setup>
-defineProps({
-  themeColor: String,
-})
+<script setup lang="ts">
+interface Props {
+  /** 主题主色（当前模板未使用，保留以兼容父组件传参） */
+  themeColor?: string
+}
+
+defineProps<Props>()
 </script>
 
 <template>
