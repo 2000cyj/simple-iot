@@ -1,16 +1,63 @@
-<script lang="jsx" setup>
+<script setup lang="ts">
+import type { DevicePage } from '@/types/api'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { deviceAddApi, deviceEditeApi, manufacturerListApi, productListApi } from '@/api'
-import { useForm } from '@/composables/useForm.js'
+import { useForm } from '@/composables/useForm'
 
-const props = defineProps(['datas', 'productTypeList', 'modelValue'])
+/**
+ * 产品类型下拉项。
+ *
+ * 后端 `ProductType.status` 是必填数字，但老接口可能不下发该字段，
+ * 页面需要用 `status === undefined` 兜底，故此处声明为可选。
+ */
+interface ProductTypeOption {
+  /** 产品类型 ID */
+  id: number
+  /** 产品类型名称 */
+  name: string
+  /** 1 启用 2 禁用 */
+  status?: number
+}
 
-const emits = defineEmits(['update', 'update:modelValue'])
+/** 设备表单数据（新增 / 编辑共用） */
+interface DeviceForm {
+  /** 设备 ID（编辑时回填） */
+  id: number
+  /** 产品 ID */
+  productId: number
+  /** 设备 Key */
+  deviceKey: string
+  /** 设备名称 */
+  deviceName: string
+  /** 产品类型 ID */
+  productTypeId?: number
+  /** 厂家 */
+  manufacturer?: string
+}
+
+interface Props {
+  /** 当前编辑的设备（为空表示新增） */
+  datas?: DevicePage | null
+  /** 产品类型下拉数据 */
+  productTypeList?: ProductTypeOption[]
+  /** 弹窗可见性（v-model） */
+  modelValue?: boolean
+}
+
+const props = defineProps<Props>()
+
+const emits = defineEmits<{
+  /** 保存成功 */
+  'update': []
+  /** 弹窗关闭 */
+  'update:modelValue': [value: boolean]
+}>()
+
 const { t } = useI18n()
 
-const manufacturerListOpt = ref([])
-const productListOpt = ref([])
+const manufacturerListOpt = ref<string[]>([])
+const productListOpt = ref<Array<{ id: number, model: string }>>([])
 // ponytail: filter out disabled types (status!=1) so cascade doesn't break on empty types
 const activeProductTypes = computed(() =>
   (props.productTypeList || []).filter(p => p.status === 1 || p.status === undefined),
@@ -23,7 +70,7 @@ const rules = ref({
   deviceKey: [{ required: true, message: t('validate.required_field', { field: t('device.device_key') }), trigger: 'blur' }],
 })
 
-const { form, onSubmit: handleSubmit, editRef, loading } = useForm({
+const { form, onSubmit: handleSubmit, editRef, loading } = useForm<DeviceForm>({
   api: props.datas ? deviceEditeApi : deviceAddApi,
   callback: () => {
     emits('update')

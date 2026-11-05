@@ -1,4 +1,27 @@
-<script setup>
+<script setup lang="ts">
+import type {
+  Device,
+  ExecutionTrace,
+  MessageReceive,
+  Product,
+  ProductType,
+  PushConfig,
+  RuleChain,
+  RuleChainAddQuery,
+  RuleChainDebugRequest,
+  RuleChainDebugResult,
+  RuleChainDetail,
+  RuleChainIssue,
+  RuleChainUpdateQuery,
+  RuleChainValidationResult,
+  RuleConnection,
+  RuleMessageType,
+  RuleNode,
+  RuleSourceType,
+  TslEvent,
+  TslModel,
+  TslProperty,
+} from '@/types/api'
 import { Close } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -17,21 +40,259 @@ import {
   ruleChainNodeTypesApi,
   ruleChainUpdateApi,
   ruleChainValidateApi,
-} from '@/api/index.js'
+  type RuleNodeTypeInfo,
+} from '@/api/index'
 import NodeConfigPanel from './NodeConfigPanel.vue'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
+// ============================================================================
+// 类型定义
+// ============================================================================
+
+/**
+ * 节点分类。
+ *
+ * 后端 `RuleNodeCategory` 只有 INPUT / FILTER / ALARM / OUTPUT / FLOW，
+ * 前端对无法识别的节点类型额外返回 UNKNOWN。
+ */
+type NodeCategory = 'INPUT' | 'FILTER' | 'ALARM' | 'OUTPUT' | 'FLOW' | 'UNKNOWN'
+
+/** 拖拽类型：新建 / 移动节点 / 连线 / 平移画布 */
+type DragType = 'new' | 'move' | 'connection' | 'pan'
+
+/**
+ * 节点配置（前端宽松形状）。
+ *
+ * 后端 `NodeConfig` 是 15 个子类的联合类型（靠 `nodeType` 判别），
+ * 但前端允许自定义节点类型 / 额外字段，且同一个面板会读写所有子类的字段，
+ * 因此这里按「前端实际读写的字段」建模，并保留索引签名兜住未知字段。
+ */
+interface EditorNodeConfig {
+  /** 节点类型判别字段（Jackson 多态） */
+  nodeType?: string
+  /** 监听的属性 / 事件标识符列表 */
+  identifiers?: string[]
+  /** 属性标识符 / 事件标识符 / 指令标识符 */
+  identifier?: string
+  /** 比较运算符 */
+  operator?: string
+  /** 比较值 */
+  value?: unknown
+  /** 事件参数标识符 */
+  paramIdentifier?: string
+  /** 上线状态：online / offline / all */
+  onlineStatus?: string
+  /** cron 表达式 */
+  cron?: string
+  /** 脚本内容 */
+  script?: string
+  /** 脚本语言 */
+  language?: string
+  /** 告警类型 */
+  alarmType?: string
+  /** 告警名称 */
+  alarmName?: string
+  /** 告警严重程度 */
+  severity?: string
+  /** 告警消息 */
+  message?: string
+  /** 清除方式：active / all */
+  clearType?: string
+  /** 消息接收者 ID */
+  messageReceiveId?: number
+  /** 消息标题 */
+  title?: string
+  /** 消息内容 */
+  content?: string
+  /** 引用的推送配置 ID */
+  pushConfigId?: number
+  /** 自定义请求体 */
+  customBody?: string
+  /** 自定义载荷 */
+  customPayload?: string
+  /** 目标模式：self / other */
+  targetMode?: string
+  /** 目标设备 ID */
+  targetDeviceId?: number
+  /** 目标产品 ID（级联选择辅助字段） */
+  targetProductId?: number
+  /** 目标产品类型 ID（级联选择辅助字段） */
+  targetProductTypeId?: number
+  /** 指令类型 */
+  commandType?: string
+  /** 指令参数（JSON 字符串） */
+  params?: string
+  /** 兜住后端未声明的自定义字段 */
+  [key: string]: unknown
+}
+
+/**
+ * 编辑器中的规则链节点。
+ *
+ * 基于后端 `RuleNode`，但把坐标改成必填（前端始终维护），
+ * 并补上前端的 `color` 字段。
+ *
+ * 注意：`type` 沿用后端的 `string`（不收窄成 `RuleNodeType`），
+ * 以免前端自定义节点类型报错。
+ */
+interface EditorNode extends Omit<RuleNode, 'config' | 'x' | 'y'> {
+  /** X 坐标 */
+  x: number
+  /** Y 坐标 */
+  y: number
+  /** 节点配置 */
+  config: EditorNodeConfig
+  /** 节点颜色 */
+  color: string
+}
+
+/** 编辑器中的连接（后端 `RuleConnection` + 兼容旧字段名） */
+interface EditorConnection extends RuleConnection {
+  /** 兼容旧字段名 */
+  connectionType?: string
+}
+
+/** 编辑器中的规则链 */
+interface EditorRuleChain {
+  id: number | null
+  name: string
+  description: string
+  sourceType: RuleSourceType
+  sourceId: number | null
+  /** 级联选择辅助字段（不保存到后端） */
+  productTypeId: number | null
+  /** 级联选择辅助字段（不保存到后端） */
+  productId: number | null
+  isRoot: boolean
+  isEnabled: boolean
+  configuration: {
+    nodes: EditorNode[]
+    connections: EditorConnection[]
+  }
+}
+
+/** 提交给后端的草稿节点（config 允许为 null） */
+interface RuleChainDraftNode extends Omit<EditorNode, 'config'> {
+  config: EditorNodeConfig | null
+}
+
+/**
+ * 提交给后端的规则链草稿。
+ *
+ * 前端草稿比后端 Query 宽松（id 可能为 null、config 允许额外字段），
+ * 故在调用 API 的边界做一次显式转换（见下方 buildRuleChainDraft 的调用点）。
+ */
+interface RuleChainDraft extends Omit<RuleChainAddQuery, 'configuration' | 'sourceId'> {
+  id: number | null
+  sourceType: RuleSourceType
+  sourceId: number | null
+  productTypeId: number | null
+  productId: number | null
+  isRoot: boolean
+  isEnabled: boolean
+  configuration: {
+    nodes: RuleChainDraftNode[]
+    connections: EditorConnection[]
+  }
+}
+
+/** 归一化后的规则链详情 */
+interface NormalizedRuleChainDetail extends Omit<RuleChainDetail, 'configuration'> {
+  configuration: EditorRuleChain['configuration']
+}
+
+/** 画布变换（缩放 + 平移） */
+interface CanvasTransform {
+  scale: number
+  translateX: number
+  translateY: number
+}
+
+/** 拖拽状态 */
+interface DragState {
+  isDragging: boolean
+  dragNode: EditorNode | null
+  dragType: DragType | null
+  startX: number
+  startY: number
+  offsetX: number
+  offsetY: number
+}
+
+/** 连线拖拽状态 */
+interface ConnectionDragState {
+  isDragging: boolean
+  sourceNode: EditorNode | null
+  sourcePort: string | null
+  connectionType?: string | null
+  tempLine?: unknown
+}
+
+/** 临时连线（拖拽中） */
+interface TempConnection {
+  sourceX: number
+  sourceY: number
+  targetX: number
+  targetY: number
+}
+
+/** 节点创建菜单 */
+interface NodeCreateMenuState {
+  visible: boolean
+  x: number
+  y: number
+  /** 画布坐标（创建节点时使用） */
+  canvasX?: number
+  /** 画布坐标（创建节点时使用） */
+  canvasY?: number
+  sourceNode: EditorNode | null
+  connectionType: string
+  availableTypes: RuleNodeTypeInfo[]
+}
+
+/** 连接线（画布上渲染的一条连线） */
+interface ConnectionLine {
+  id: string
+  source: { x: number, y: number }
+  target: { x: number, y: number }
+  sourceNode: string
+  targetNode: string
+  connectionType: string
+}
+
+/** 调试表单 */
+interface DebugForm {
+  deviceKey: string
+  deviceId: number | null
+  deviceName: string
+  messageType: RuleMessageType
+  /** 属性数据（JSON 字符串） */
+  propertiesJson: string
+  eventIdentifier: string
+  /** 事件参数（JSON 字符串） */
+  eventParamsJson: string
+  /** 附加数据（JSON 字符串） */
+  enrichedDataJson: string
+}
+
+/** 调试轨迹 + 序号 */
+type DebugTrace = ExecutionTrace & { index: number }
+
+// ============================================================================
+// 状态
+// ============================================================================
+
 // 规则链数据
-const ruleChain = ref({
+const ruleChain = ref<EditorRuleChain>({
   id: null,
   name: '',
   description: '',
   sourceType: 'PRODUCT',
   sourceId: null,
-  // 巻加级联选择辅助字段（不保存到后端)
+  // 卷加级联选择辅助字段（不保存到后端)
   productTypeId: null,
   productId: null,
   isRoot: false,
@@ -43,27 +304,27 @@ const ruleChain = ref({
 })
 
 // 节点类型
-const nodeTypes = ref([])
+const nodeTypes = ref<RuleNodeTypeInfo[]>([])
 
 // 级联选择数据
-const productTypeOptions = ref([])
-const productOptions = ref([])
-const deviceOptions = ref([])
+const productTypeOptions = ref<ProductType[]>([])
+const productOptions = ref<Product[]>([])
+const deviceOptions = ref<Device[]>([])
 
 // 消息接收配置选项（用于消息推送节点）
-const messageReceiveOptions = ref([])
+const messageReceiveOptions = ref<MessageReceive[]>([])
 
 // 推送配置选项（用于HTTP/MQTT节点）
-const pushConfigOptions = ref([])
+const pushConfigOptions = ref<PushConfig[]>([])
 
 // 物模型{{ t('ruleChain.property') }}列表（用于{{ t('ruleChain.property') }}过滤节点）
-const tslProperties = ref([])
+const tslProperties = ref<TslProperty[]>([])
 
 // 物模型{{ t('ruleChain.event') }}列表（用于{{ t('ruleChain.event') }}输入节点）
-const tslEvents = ref([])
+const tslEvents = ref<TslEvent[]>([])
 
 // 选中的节点
-const selectedNode = ref(null)
+const selectedNode = ref<EditorNode | null>(null)
 
 // 保存加载状态
 const saving = ref(false)
@@ -71,8 +332,8 @@ const saving = ref(false)
 // 规则链调试状态
 const debugDialogVisible = ref(false)
 const debugRunning = ref(false)
-const debugResult = ref(null)
-const debugForm = ref({
+const debugResult = ref<RuleChainDebugResult | null>(null)
+const debugForm = ref<DebugForm>({
   deviceKey: 'demo-device-001',
   deviceId: null,
   deviceName: t('ruleChain.demo_device'),
@@ -84,18 +345,18 @@ const debugForm = ref({
 })
 
 // 画布引用
-const canvasRef = ref(null)
-const svgRef = ref(null)
+const canvasRef = ref<HTMLElement | null>(null)
+const svgRef = ref<SVGSVGElement | null>(null)
 
 // 画布变换状态（缩放和平移）
-const canvasTransform = ref({
+const canvasTransform = ref<CanvasTransform>({
   scale: 1,
   translateX: 0,
   translateY: 0,
 })
 
 // 拖拽状态
-const dragState = ref({
+const dragState = ref<DragState>({
   isDragging: false,
   dragNode: null,
   dragType: null, // 'new' | 'move' | 'connection' | 'pan'
@@ -106,36 +367,42 @@ const dragState = ref({
 })
 
 // 连线拖拽状态
-const connectionDrag = ref({
+const connectionDrag = ref<ConnectionDragState>({
   isDragging: false,
   sourceNode: null,
   sourcePort: null,
   tempLine: null,
 })
 // 临时连线（拖拽中)
-const tempConnection = ref(null)
+const tempConnection = ref<TempConnection | null>(null)
 
 // 节点创建菜单
-const nodeCreateMenu = ref({
+const nodeCreateMenu = ref<NodeCreateMenuState>({
   visible: false,
   x: 0,
   y: 0,
   sourceNode: null,
-  connectionType: null,
+  connectionType: '',
   availableTypes: [],
 })
 
+// 路由参数（规则链 ID，'new' 表示新建）
+const routeId = computed<string>(() => {
+  const raw = route.params.id
+  return Array.isArray(raw) ? (raw[0] ?? '') : (raw ?? '')
+})
+
 // 是否是编辑模式
-const isEdit = computed(() => !!route.params.id && route.params.id !== 'new')
+const isEdit = computed(() => !!routeId.value && routeId.value !== 'new')
 
 // 获取选中节点的上游输入节点（用于过滤节点获取可选{{ t('ruleChain.property') }}）
-const upstreamInputNode = computed(() => {
+const upstreamInputNode = computed<EditorNode | null>(() => {
   if (!selectedNode.value)
     return null
 
   // 查找连接到当前节点的上游节点
   const incomingConnections = ruleChain.value.configuration.connections.filter(
-    c => c.target === selectedNode.value.id,
+    c => c.target === selectedNode.value!.id,
   )
 
   if (incomingConnections.length === 0)
@@ -143,23 +410,23 @@ const upstreamInputNode = computed(() => {
 
   // 获取第一个上游节点
   const sourceNodeId = incomingConnections[0].source
-  return ruleChain.value.configuration.nodes.find(n => n.id === sourceNodeId)
+  return ruleChain.value.configuration.nodes.find(n => n.id === sourceNodeId) ?? null
 })
 
 // 判断是否是输入节点
-function isInputNode(type) {
+function isInputNode(type: string) {
   const inputTypes = ['INPUT_PROPERTY', 'INPUT_EVENT', 'INPUT_ONLINE', 'INPUT_SCHEDULE']
   return inputTypes.includes(type)
 }
 
 // 判断是否是过滤节点
-function isFilterNode(type) {
+function isFilterNode(type: string) {
   const filterTypes = ['FILTER_PROPERTY', 'FILTER_EVENT_TYPE', 'FILTER_SCRIPT']
   return filterTypes.includes(type)
 }
 
 // 获取节点分类
-function getNodeCategory(type) {
+function getNodeCategory(type: string): NodeCategory {
   if (type.startsWith('INPUT_'))
     return 'INPUT'
   if (type.startsWith('FILTER_'))
@@ -172,7 +439,7 @@ function getNodeCategory(type) {
 }
 
 // 验证连接是否有效
-function isValidConnection(sourceType, targetType, _connectionType) {
+function isValidConnection(sourceType: string, targetType: string, _connectionType: string) {
   const sourceCategory = getNodeCategory(sourceType)
   const targetCategory = getNodeCategory(targetType)
 
@@ -220,7 +487,7 @@ function isValidConnection(sourceType, targetType, _connectionType) {
 }
 
 // 获取连接错误消息
-function getConnectionErrorMessage(sourceType, targetType) {
+function getConnectionErrorMessage(sourceType: string, targetType: string) {
   const sourceCategory = getNodeCategory(sourceType)
   const targetCategory = getNodeCategory(targetType)
 
@@ -267,8 +534,8 @@ function getConnectionErrorMessage(sourceType, targetType) {
 const nodeSearchKeyword = ref('')
 
 // 节点分类（支持搜索过滤）
-const nodeCategories = computed(() => {
-  const categories = {}
+const nodeCategories = computed<Record<string, RuleNodeTypeInfo[]>>(() => {
+  const categories: Record<string, RuleNodeTypeInfo[]> = {}
   const keyword = nodeSearchKeyword.value.toLowerCase().trim()
 
   nodeTypes.value.forEach((type) => {
@@ -294,41 +561,51 @@ const nodeCategories = computed(() => {
 })
 
 // 获取连接类型（兼容 type 和 connectionType 字段名）
-function getConnectionType(conn) {
+function getConnectionType(conn: { type?: string, connectionType?: string }): string {
   return conn.type || conn.connectionType || 'Success'
 }
 
-function normalizeApiData(payload) {
-  return payload?.data ?? payload ?? {}
+/**
+ * 兼容后端有时把载荷再包一层 `{ data: ... }` 的情况。
+ */
+function normalizeApiData<T>(payload: unknown): T {
+  const wrapper = payload as { data?: T } | null | undefined
+  return (wrapper?.data ?? payload ?? {}) as T
 }
 
-function normalizeList(payload) {
-  const value = payload?.records
-    ?? payload?.list
-    ?? payload?.rows
-    ?? payload?.data?.records
-    ?? payload?.data?.list
-    ?? payload?.data?.rows
-    ?? payload?.data
-    ?? payload
-  return Array.isArray(value) ? value : []
+/**
+ * 从多种分页 / 列表响应形态里取出数组。
+ */
+function normalizeList<T = unknown>(payload: unknown): T[] {
+  const wrapper = (payload ?? {}) as Record<string, unknown>
+  const nested = wrapper.data as Record<string, unknown> | undefined
+  const value
+    = wrapper.records
+      ?? wrapper.list
+      ?? wrapper.rows
+      ?? nested?.records
+      ?? nested?.list
+      ?? nested?.rows
+      ?? nested
+      ?? payload
+  return (Array.isArray(value) ? value : []) as T[]
 }
 
-function getNodeTypeMeta(type) {
-  return nodeTypes.value.find(item => item.type === type) || {}
+function getNodeTypeMeta(type: string | undefined): Partial<RuleNodeTypeInfo> {
+  return nodeTypes.value.find(item => item.type === type) ?? {}
 }
 
-function normalizeRuleChainDetail(detail) {
+function normalizeRuleChainDetail(detail: RuleChainDetail): NormalizedRuleChainDetail {
   const configuration = detail.configuration || {}
-  const nodes = normalizeList(configuration.nodes).map((node) => {
+  const nodes = normalizeList<RuleNode & { color?: string }>(configuration.nodes).map((node): EditorNode => {
     const meta = getNodeTypeMeta(node.type || node.config?.nodeType)
-    const nodeType = node.type || node.config?.nodeType || meta.type
+    const nodeType = node.type || node.config?.nodeType || meta.type || ''
     return {
       ...node,
       type: nodeType,
       name: node.name || meta.name || nodeType,
       color: node.color || meta.color || '#6366f1',
-      config: node.config || {},
+      config: (node.config || {}) as unknown as EditorNodeConfig,
       x: Number.isFinite(Number(node.x)) ? Number(node.x) : 0,
       y: Number.isFinite(Number(node.y)) ? Number(node.y) : 0,
     }
@@ -339,7 +616,7 @@ function normalizeRuleChainDetail(detail) {
     configuration: {
       ...configuration,
       nodes,
-      connections: normalizeList(configuration.connections).map(conn => ({
+      connections: normalizeList<RuleConnection>(configuration.connections).map(conn => ({
         ...conn,
         type: getConnectionType(conn),
       })),
@@ -348,8 +625,8 @@ function normalizeRuleChainDetail(detail) {
 }
 
 // 计算连接线
-const connectionLines = computed(() => {
-  return ruleChain.value.configuration.connections.map((conn) => {
+const connectionLines = computed<ConnectionLine[]>(() => {
+  return ruleChain.value.configuration.connections.map((conn): ConnectionLine | null => {
     const sourceNode = ruleChain.value.configuration.nodes.find(n => n.id === conn.source)
     const targetNode = ruleChain.value.configuration.nodes.find(n => n.id === conn.target)
 
@@ -384,19 +661,19 @@ const connectionLines = computed(() => {
       targetNode: conn.target,
       connectionType: connType,
     }
-  }).filter(Boolean)
+  }).filter((line): line is ConnectionLine => line !== null)
 })
 
-const debugTraceMap = computed(() => {
-  const map = {}
+const debugTraceMap = computed<Record<string, DebugTrace>>(() => {
+  const map: Record<string, DebugTrace> = {}
   ;(debugResult.value?.traces || []).forEach((trace, index) => {
-    map[trace.nodeId] = { ...trace, index: index + 1 }
+    map[trace.nodeId as string] = { ...trace, index: index + 1 }
   })
   return map
 })
 
 const debugExecutedConnectionSet = computed(() => {
-  const set = new Set()
+  const set = new Set<string>()
   ;(debugResult.value?.executedConnections || []).forEach((conn) => {
     set.add(`${conn.source}->${conn.target}:${getConnectionType(conn)}`)
   })
@@ -408,12 +685,12 @@ const validationIssues = computed(() => [
   ...(debugResult.value?.validation?.warnings || []),
 ])
 
-function isDebugConnectionExecuted(line) {
+function isDebugConnectionExecuted(line: ConnectionLine) {
   return debugExecutedConnectionSet.value.has(`${line.sourceNode}->${line.targetNode}:${line.connectionType}`)
 }
 
-function getValidationIssueType(issue) {
-  return (debugResult.value?.validation?.errors || []).includes(issue) ? 'danger' : 'warning'
+function getValidationIssueType(issue: RuleChainIssue) {
+  return (debugResult.value?.validation?.errors || []).includes(issue) ? 'error' : 'warning'
 }
 
 // 加载节点类型
@@ -421,7 +698,7 @@ async function loadNodeTypes() {
   try {
     const { data } = await ruleChainNodeTypesApi()
     const entries = Object.entries(data || {})
-    const result = []
+    const result: RuleNodeTypeInfo[] = []
     for (const [, types] of entries) {
       result.push(...types)
     }
@@ -473,7 +750,7 @@ async function loadProducts() {
   }
   try {
     const { data } = await productListApi({ productTypeId: ruleChain.value.productTypeId })
-    productOptions.value = normalizeList(data)
+    productOptions.value = normalizeList<Product>(data)
   }
   catch (e) {
     console.error(t('ruleChain.failed_load_products'), e)
@@ -488,7 +765,7 @@ async function loadDevices() {
   }
   try {
     const { data } = await deviceListApi({ productId: ruleChain.value.productId })
-    deviceOptions.value = normalizeList(data)
+    deviceOptions.value = normalizeList<Device>(data)
   }
   catch (e) {
     console.error(t('ruleChain.failed_load_devices'), e)
@@ -526,7 +803,9 @@ async function loadTslProperties() {
   }
   try {
     const { data } = await loadTslData(ruleChain.value.productId)
-    const tslModel = data.data || data
+    // 后端有可能把物模型再包一层 { data: {...} }
+    const wrapper = data as unknown as { data?: TslModel }
+    const tslModel = wrapper.data || data
     tslProperties.value = tslModel.properties || []
     tslEvents.value = tslModel.events || []
   }
@@ -547,11 +826,11 @@ function onSourceTypeChange() {
 
 // 加载规则链详情
 async function loadDetail() {
-  if (!route.params.id || route.params.id === 'new')
+  if (!routeId.value || routeId.value === 'new')
     return
   try {
-    const { data } = await ruleChainDetailApi(route.params.id)
-    const detail = normalizeRuleChainDetail(normalizeApiData(data))
+    const { data } = await ruleChainDetailApi(Number(routeId.value))
+    const detail = normalizeRuleChainDetail(normalizeApiData<RuleChainDetail>(data))
     Object.assign(ruleChain.value, detail)
 
     // 根据sourceType和sourceId反推级联选择字段(编辑模式回显)
@@ -561,7 +840,7 @@ async function loadDetail() {
       // 遍历所有产品类型，找到包含该产品的类型
       for (const pt of productTypeOptions.value) {
         const { data: productResponse } = await productListApi({ productTypeId: pt.id })
-        const products = normalizeList(productResponse)
+        const products = normalizeList<Product>(productResponse)
         const product = products.find(p => p.id === detail.sourceId)
         if (product) {
           ruleChain.value.productTypeId = pt.id
@@ -575,10 +854,10 @@ async function loadDetail() {
       // 遍历所有产品类型和产品，找到包含该设备的产品
       for (const pt of productTypeOptions.value) {
         const { data: productResponse } = await productListApi({ productTypeId: pt.id })
-        const products = normalizeList(productResponse)
+        const products = normalizeList<Product>(productResponse)
         for (const p of products) {
           const { data: deviceResponse } = await deviceListApi({ productId: p.id })
-          const devices = normalizeList(deviceResponse)
+          const devices = normalizeList<Device>(deviceResponse)
           const device = devices.find(d => d.id === detail.sourceId)
           if (device) {
             ruleChain.value.productTypeId = pt.id
@@ -608,40 +887,40 @@ function generateId() {
 }
 
 // 开始从节点库拖拽
-function startDragFromPanel(type, event) {
-  event.dataTransfer.setData('nodeType', JSON.stringify(type))
-  event.dataTransfer.effectAllowed = 'copy'
+function startDragFromPanel(type: RuleNodeTypeInfo, event: DragEvent) {
+  event.dataTransfer!.setData('nodeType', JSON.stringify(type))
+  event.dataTransfer!.effectAllowed = 'copy'
 }
 
 // 画布拖拽进入
-function onCanvasDragOver(event) {
+function onCanvasDragOver(event: DragEvent) {
   event.preventDefault()
-  event.dataTransfer.dropEffect = 'copy'
+  event.dataTransfer!.dropEffect = 'copy'
 }
 
 // 画布放置
-function onCanvasDrop(event) {
+function onCanvasDrop(event: DragEvent) {
   event.preventDefault()
-  const nodeTypeData = event.dataTransfer.getData('nodeType')
+  const nodeTypeData = event.dataTransfer!.getData('nodeType')
   if (!nodeTypeData)
     return
-  const type = JSON.parse(nodeTypeData)
-  const rect = canvasRef.value.getBoundingClientRect()
+  const type = JSON.parse(nodeTypeData) as RuleNodeTypeInfo
+  const rect = canvasRef.value!.getBoundingClientRect()
   const x = event.clientX - rect.left - 90 // Center horizontally
   const y = event.clientY - rect.top - 30
   addNode(type, x, y)
 }
 
 // 点击添加节点
-function onNodeClick(type, _event) {
+function onNodeClick(type: RuleNodeTypeInfo, _event: Event) {
   const x = 100 + Math.random() * 200
   const y = 100 + Math.random() * 200
   addNode(type, x, y)
 }
 
 // 添加节点
-function addNode(type, x, y) {
-  const node = {
+function addNode(type: RuleNodeTypeInfo, x: number, y: number) {
+  const node: EditorNode = {
     id: generateId(),
     type: type.type,
     name: type.name,
@@ -655,7 +934,7 @@ function addNode(type, x, y) {
 }
 
 // 开始拖拽节点
-function startDragNode(node, event) {
+function startDragNode(node: EditorNode, event: MouseEvent) {
   event.stopPropagation()
   dragState.value = {
     isDragging: true,
@@ -670,13 +949,13 @@ function startDragNode(node, event) {
   document.addEventListener('mouseup', stopDragNode)
 }
 // 拖拽节点中
-function onDragNode(event) {
+function onDragNode(event: MouseEvent) {
   if (!dragState.value.isDragging)
     return
   const dx = event.clientX - dragState.value.startX
   const dy = event.clientY - dragState.value.startY
-  dragState.value.dragNode.x = Math.max(0, dragState.value.offsetX + dx)
-  dragState.value.dragNode.y = Math.max(0, dragState.value.offsetY + dy)
+  dragState.value.dragNode!.x = Math.max(0, dragState.value.offsetX + dx)
+  dragState.value.dragNode!.y = Math.max(0, dragState.value.offsetY + dy)
 }
 // 停止拖拽节点
 function stopDragNode() {
@@ -685,7 +964,7 @@ function stopDragNode() {
   document.removeEventListener('mouseup', stopDragNode)
 }
 // 开始连接线拖拽
-function startConnection(node, portType, event) {
+function startConnection(node: EditorNode, portType: string, event: MouseEvent) {
   event.stopPropagation()
   event.preventDefault()
   // portType: 'input', 'True', 'False', 'Success'
@@ -699,11 +978,11 @@ function startConnection(node, portType, event) {
   document.addEventListener('mouseup', stopConnection)
 }
 // 连接线拖拽中
-function onConnectionDrag(event) {
+function onConnectionDrag(event: MouseEvent) {
   if (!connectionDrag.value.isDragging)
     return
-  const rect = canvasRef.value.getBoundingClientRect()
-  const node = connectionDrag.value.sourceNode
+  const rect = canvasRef.value!.getBoundingClientRect()
+  const node = connectionDrag.value.sourceNode!
 
   // 计算源端口位置（与CSS中的端口位置一致）
   let sourceY = node.y + 40 // Default center
@@ -722,10 +1001,10 @@ function onConnectionDrag(event) {
   }
 }
 // 停止连接线拖拽
-function stopConnection(event) {
+function stopConnection(event: MouseEvent) {
   if (connectionDrag.value.isDragging) {
     // 检查是否放在某{{ t('ruleChain.nodes') }}的输入端口上
-    const rect = canvasRef.value.getBoundingClientRect()
+    const rect = canvasRef.value!.getBoundingClientRect()
     const dropX = event.clientX - rect.left
     const dropY = event.clientY - rect.top
     // 查找目标节点
@@ -735,20 +1014,20 @@ function stopConnection(event) {
         && dropX <= node.x + 180
         && dropY >= node.y
         && dropY <= node.y + 80
-        && node.id !== connectionDrag.value.sourceNode.id
+        && node.id !== connectionDrag.value.sourceNode!.id
         && !isInputNode(node.type) // Input nodes cannot be targets
       )
     })
 
     // 确定连接类型
-    let connectionType = connectionDrag.value.connectionType
+    let connectionType = connectionDrag.value.connectionType ?? 'Success'
     if (connectionType === 'input') {
       connectionType = 'Success' // Default to Success when dragging from an input port
     }
 
     if (targetNode) {
       // 验证连接是否有效
-      const sourceType = connectionDrag.value.sourceNode.type
+      const sourceType = connectionDrag.value.sourceNode!.type
       const targetType = targetNode.type
       if (!isValidConnection(sourceType, targetType, connectionType)) {
         ElMessage.warning(getConnectionErrorMessage(sourceType, targetType))
@@ -762,13 +1041,13 @@ function stopConnection(event) {
       // 检查是否已存在相同连接（使用 type 字段）
       const exists = ruleChain.value.configuration.connections.some(
         c =>
-          c.source === connectionDrag.value.sourceNode.id
+          c.source === connectionDrag.value.sourceNode!.id
           && c.target === targetNode.id
           && getConnectionType(c) === connectionType,
       )
       if (!exists) {
         ruleChain.value.configuration.connections.push({
-          source: connectionDrag.value.sourceNode.id,
+          source: connectionDrag.value.sourceNode!.id,
           target: targetNode.id,
           type: connectionType, // Keep the type field aligned with the backend
         })
@@ -786,8 +1065,8 @@ function stopConnection(event) {
 }
 
 // 显示节点创建菜单
-function showNodeCreateMenu(clientX, clientY, canvasX, canvasY, connectionType) {
-  const sourceNode = connectionDrag.value.sourceNode
+function showNodeCreateMenu(clientX: number, clientY: number, canvasX: number, canvasY: number, connectionType: string) {
+  const sourceNode = connectionDrag.value.sourceNode!
   // 根据源节点类型过滤可连接的节点类型
   // INPUT 节点只能连到 FILTER/ALARM/OUTPUT
   // FILTER/ALARM/OUTPUT 可以互相连接
@@ -818,14 +1097,14 @@ function showNodeCreateMenu(clientX, clientY, canvasX, canvasY, connectionType) 
 }
 
 // 从菜单创建节点并连接
-function createNodeAndConnect(type) {
+function createNodeAndConnect(type: RuleNodeTypeInfo) {
   // 在菜单位置创建节点
-  const node = {
+  const node: EditorNode = {
     id: generateId(),
     type: type.type,
     name: type.name,
-    x: Math.max(0, nodeCreateMenu.value.canvasX - 90), // Center horizontally
-    y: Math.max(0, nodeCreateMenu.value.canvasY - 40),
+    x: Math.max(0, nodeCreateMenu.value.canvasX! - 90), // Center horizontally
+    y: Math.max(0, nodeCreateMenu.value.canvasY! - 40),
     config: {},
     color: type.color || '#6366f1',
   }
@@ -833,7 +1112,7 @@ function createNodeAndConnect(type) {
 
   // 创建连接
   ruleChain.value.configuration.connections.push({
-    source: nodeCreateMenu.value.sourceNode.id,
+    source: nodeCreateMenu.value.sourceNode!.id,
     target: node.id,
     type: nodeCreateMenu.value.connectionType,
   })
@@ -850,7 +1129,7 @@ function closeNodeCreateMenu() {
   nodeCreateMenu.value.visible = false
 }
 // 删除节点
-function deleteNode(nodeId) {
+function deleteNode(nodeId: string) {
   ruleChain.value.configuration.nodes = ruleChain.value.configuration.nodes.filter(
     n => n.id !== nodeId,
   )
@@ -863,7 +1142,7 @@ function deleteNode(nodeId) {
 }
 
 // 更新{{ t('ruleChain.node_config') }}（同步更新 selectedNode 和 nodes 数组）
-function updateNode(updatedNode) {
+function updateNode(updatedNode: EditorNode) {
   selectedNode.value = updatedNode
   const index = ruleChain.value.configuration.nodes.findIndex(n => n.id === updatedNode.id)
   if (index !== -1) {
@@ -872,7 +1151,7 @@ function updateNode(updatedNode) {
 }
 
 // 删除连接
-function deleteConnection(sourceId, targetId, connectionType) {
+function deleteConnection(sourceId: string, targetId: string, connectionType?: string) {
   // 标准化 connectionType，将 undefined/null 视为 'Success'
   const normalizedType = connectionType || 'Success'
   ruleChain.value.configuration.connections = ruleChain.value.configuration.connections.filter(
@@ -883,12 +1162,12 @@ function deleteConnection(sourceId, targetId, connectionType) {
   )
 }
 // 生成贝塞尔曲线路径
-function generateBezierPath(x1, y1, x2, y2) {
+function generateBezierPath(x1: number, y1: number, x2: number, y2: number) {
   const cpOffset = Math.min(Math.abs(x2 - x1) * 0.5, 100)
   return `M ${x1} ${y1} C ${x1 + cpOffset} ${y1}, ${x2 - cpOffset} ${y2}, ${x2} ${y2}`
 }
 
-function buildRuleChainDraft() {
+function buildRuleChainDraft(): RuleChainDraft {
   const configuration = {
     nodes: ruleChain.value.configuration.nodes.map(node => ({
       ...node,
@@ -906,22 +1185,25 @@ function buildRuleChainDraft() {
   }
 }
 
-function parseJsonField(value, fieldName) {
+function parseJsonField(value: string, fieldName: string): Record<string, unknown> {
   if (!value || !value.trim())
     return {}
   try {
-    return JSON.parse(value)
+    return JSON.parse(value) as Record<string, unknown>
   }
   catch (e) {
-    throw new Error(t('ruleChain.field_not_valid_json_message', { field: fieldName, message: e.message }))
+    throw new Error(t('ruleChain.field_not_valid_json_message', {
+      field: fieldName,
+      message: e instanceof Error ? e.message : String(e),
+    }))
   }
 }
 
-function formatJson(value) {
+function formatJson(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2)
 }
 
-function getTraceStatusType(status) {
+function getTraceStatusType(status?: string) {
   if (status === 'SUCCESS')
     return 'success'
   if (status === 'FAILED' || status === 'ERROR')
@@ -952,12 +1234,13 @@ async function handleDebugRun() {
       eventParams: parseJsonField(debugForm.value.eventParamsJson, t('ruleChain.event_parameters')),
       enrichedData: parseJsonField(debugForm.value.enrichedDataJson, t('ruleChain.extra_variables')),
     }
-    const { data } = await ruleChainDebugApi(payload)
-    debugResult.value = normalizeApiData(data)
+    // 前端草稿比后端 Query 宽松（id 可能为 null、config 允许额外字段），在边界做一次显式转换
+    const { data } = await ruleChainDebugApi(payload as unknown as RuleChainDebugRequest)
+    debugResult.value = normalizeApiData<RuleChainDebugResult>(data)
     ElMessage.success(t('ruleChain.debug_run_completed_execution_path_highlighted_canvas'))
   }
   catch (e) {
-    ElMessage.error(e.message || t('ruleChain.debug_run_failed'))
+    ElMessage.error(e instanceof Error && e.message ? e.message : t('ruleChain.debug_run_failed'))
     console.error(t('ruleChain.debug_run_failed'), e)
   }
   finally {
@@ -965,9 +1248,9 @@ async function handleDebugRun() {
   }
 }
 
-async function validateRuleChainDraft() {
-  const { data } = await ruleChainValidateApi(buildRuleChainDraft())
-  return normalizeApiData(data)
+async function validateRuleChainDraft(): Promise<RuleChainValidationResult> {
+  const { data } = await ruleChainValidateApi(buildRuleChainDraft() as unknown as RuleChain)
+  return normalizeApiData<RuleChainValidationResult>(data)
 }
 
 async function handleValidateDraft() {
@@ -990,7 +1273,7 @@ async function handleValidateDraft() {
     }
   }
   catch (e) {
-    ElMessage.error(e.message || t('ruleChain.rule_chain_validation_failed'))
+    ElMessage.error(e instanceof Error && e.message ? e.message : t('ruleChain.rule_chain_validation_failed'))
     console.error(t('ruleChain.rule_chain_validation_failed'), e)
   }
   finally {
@@ -1004,10 +1287,10 @@ async function handleSave() {
   try {
     const submitData = buildRuleChainDraft()
     if (isEdit.value) {
-      await ruleChainUpdateApi(submitData)
+      await ruleChainUpdateApi(submitData as unknown as RuleChainUpdateQuery)
     }
     else {
-      await ruleChainAddApi(submitData)
+      await ruleChainAddApi(submitData as unknown as RuleChainAddQuery)
     }
     router.push('/rule-chain')
   }
@@ -1024,9 +1307,10 @@ function handleBack() {
 }
 
 // 快捷键处理
-function handleKeydown(e) {
+function handleKeydown(e: KeyboardEvent) {
+  const target = e.target as HTMLElement | null
   // 输入框内不触发快捷键
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+  if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') {
     // 但允许 Ctrl+S 在输入框内保存
     if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
@@ -1055,7 +1339,7 @@ function handleKeydown(e) {
 }
 
 // 画布缩放控制
-function handleZoom(delta) {
+function handleZoom(delta: number) {
   const newScale = Math.max(0.1, Math.min(3, canvasTransform.value.scale + delta))
   canvasTransform.value.scale = newScale
 }
@@ -1077,7 +1361,7 @@ function handleResetView() {
 }
 
 // 画布滚轮缩放
-function handleCanvasWheel(e) {
+function handleCanvasWheel(e: WheelEvent) {
   if (e.ctrlKey || e.metaKey) {
     e.preventDefault()
     const delta = e.deltaY > 0 ? -0.05 : 0.05
@@ -1086,9 +1370,10 @@ function handleCanvasWheel(e) {
 }
 
 // 画布空白区域拖拽平移
-function handleCanvasMouseDown(e) {
+function handleCanvasMouseDown(e: MouseEvent) {
   // 只有在空白区域（canvas-panel 本身）点击才触发平移
-  if (e.target.classList.contains('canvas-panel')) {
+  const target = e.target as HTMLElement | null
+  if (target?.classList.contains('canvas-panel')) {
     dragState.value = {
       isDragging: true,
       dragType: 'pan',
@@ -1101,7 +1386,7 @@ function handleCanvasMouseDown(e) {
   }
 }
 
-function handleCanvasMouseMove(e) {
+function handleCanvasMouseMove(e: MouseEvent) {
   if (dragState.value.isDragging && dragState.value.dragType === 'pan') {
     canvasTransform.value.translateX = e.clientX - dragState.value.startX
     canvasTransform.value.translateY = e.clientY - dragState.value.startY
@@ -1120,7 +1405,7 @@ onMounted(async () => {
   await loadProductTypes()
   await loadMessageReceiveOptions()
   await loadPushConfigOptions()
-  if (route.params.id && route.params.id !== 'new') {
+  if (routeId.value && routeId.value !== 'new') {
     await loadDetail()
   }
 
@@ -1364,7 +1649,7 @@ onBeforeUnmount(() => {
                 'is-input': isInputNode(node.type),
                 'is-filter': isFilterNode(node.type),
                 'debug-success': debugTraceMap[node.id]?.status === 'SUCCESS',
-                'debug-failed': ['FAILED', 'ERROR'].includes(debugTraceMap[node.id]?.status),
+                'debug-failed': ['FAILED', 'ERROR'].includes(debugTraceMap[node.id]?.status ?? ''),
               },
             ]"
             :style="{ 'left': `${node.x}px`, 'top': `${node.y}px`, '--node-color': node.color }"

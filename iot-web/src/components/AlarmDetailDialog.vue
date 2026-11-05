@@ -1,46 +1,66 @@
-<script setup>
+<script setup lang="ts">
+import type { Alarm, AlarmPage } from '@/types/api'
 import { Check, Close } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { alarmAcknowledgeApi, alarmClearApi } from '@/api/index.js'
+import { alarmAcknowledgeApi, alarmClearApi } from '@/api'
 
-const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: false,
-  },
-  alarm: {
-    type: Object,
-    default: null,
-  },
+interface Props {
+  modelValue?: boolean
+  alarm?: Alarm | AlarmPage | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: false,
+  alarm: null,
 })
 
-const emits = defineEmits(['update:modelValue', 'refresh'])
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  'refresh': []
+}>()
 const { t, locale } = useI18n()
 
+type TagType = 'danger' | 'warning' | 'info' | 'success' | 'primary' | ''
+interface TagDetails {
+  type: TagType
+  text: string
+}
+interface DetailItem {
+  label: string
+  value?: string
+  tag?: boolean
+  tagType?: TagType
+  full?: boolean
+}
+interface DetailSection {
+  title: string
+  items: DetailItem[]
+}
+
 // 获取严重程度标签
-function getSeverityTag(severity) {
-  const map = {
+function getSeverityTag(severity?: string): TagDetails {
+  const map: Record<string, TagDetails> = {
     CRITICAL: { type: 'danger', text: t('alarm.severity_critical') },
     MAJOR: { type: 'warning', text: t('alarm.severity_major') },
     MINOR: { type: 'info', text: t('alarm.severity_minor') },
     WARNING: { type: '', text: t('common.warning') },
   }
-  return map[severity] || { type: '', text: severity }
+  return map[severity ?? ''] || { type: '', text: severity ?? '' }
 }
 
 // 获取状态标签
-function getStatusTag(status) {
-  const map = {
+function getStatusTag(status?: string): TagDetails {
+  const map: Record<string, TagDetails> = {
     ACTIVE: { type: 'danger', text: t('alarm.status_active') },
     CLEARED: { type: 'success', text: t('alarm.status_cleared') },
     ACKNOWLEDGED: { type: 'warning', text: t('alarm.status_acknowledged') },
   }
-  return map[status] || { type: '', text: status }
+  return map[status ?? ''] || { type: '', text: status ?? '' }
 }
 
 // 格式化时间
-function formatTime(timeStr) {
+function formatTime(timeStr?: string): string {
   if (!timeStr)
     return '-'
   const date = new Date(timeStr)
@@ -57,12 +77,12 @@ function formatTime(timeStr) {
 }
 
 // 详情数据格式化
-const detailSections = computed(() => {
+const detailSections = computed<DetailSection[]>(() => {
   if (!props.alarm)
     return []
 
   const alarm = props.alarm
-  const sections = []
+  const sections: DetailSection[] = []
 
   // 基本信息
   sections.push({
@@ -91,7 +111,7 @@ const detailSections = computed(() => {
       { label: t('alarm.start_time'), value: formatTime(alarm.startTs) },
       { label: t('alarm.end_time'), value: formatTime(alarm.endTs) },
       { label: t('alarm.clear_time'), value: formatTime(alarm.clearTs) },
-      { label: t('alarm.clear_by'), value: alarm.clearBy || '-' },
+      { label: t('alarm.clear_by'), value: ('clearBy' in alarm && alarm.clearBy) || '-' },
     ],
   })
 
@@ -120,17 +140,17 @@ const detailSections = computed(() => {
 })
 
 // 关闭弹窗
-function handleClose() {
-  emits('update:modelValue', false)
+function handleClose(): void {
+  emit('update:modelValue', false)
 }
 
 // 确认告警
-async function handleAcknowledge() {
+async function handleAcknowledge(): Promise<void> {
   if (!props.alarm)
     return
   try {
     await alarmAcknowledgeApi(props.alarm.id)
-    emits('refresh')
+    emit('refresh')
   }
   catch (e) {
     console.error(t('alarm.alarmdetaildialog'), e)
@@ -138,13 +158,13 @@ async function handleAcknowledge() {
 }
 
 // 清除告警
-async function handleClear() {
+async function handleClear(): Promise<void> {
   if (!props.alarm)
     return
   try {
     await alarmClearApi(props.alarm.id)
     handleClose()
-    emits('refresh')
+    emit('refresh')
   }
   catch (e) {
     console.error(t('alarm.alarmdetaildialog_alarmdetaildialog'), e)
@@ -178,7 +198,7 @@ async function handleClear() {
           >
             <span class="item-label">{{ item.label }}</span>
             <span class="item-value">
-              <el-tag v-if="item.tag" :type="item.tagType" size="small">
+              <el-tag v-if="item.tag" :type="item.tagType || undefined" size="small">
                 {{ item.value }}
               </el-tag>
               <span v-else>{{ item.value }}</span>

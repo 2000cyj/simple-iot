@@ -1,21 +1,27 @@
-<script setup>
+<script setup lang="ts">
+import type { Icon } from '@/types/api'
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { iconListApi } from '@/api/index.js'
+import { iconListApi } from '@/api/index'
 import DefaultIcon from '@/components/DefaultIcon.vue'
 
-const props = defineProps({
-  value: {
-    type: [String, Number],
-    default: '',
-  },
+interface Props {
+  /** 当前选中的图标 ID */
+  value?: string | number
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  value: '',
 })
 
-const emit = defineEmits(['update:value'])
+const emit = defineEmits<{
+  'update:value': [value: number]
+}>()
+
 const { t } = useI18n()
 
-const list = ref([])
-const actIcon = ref(null)
+const list = ref<Icon[]>([])
+const actIcon = ref<Icon | null>(null)
 const imageLoadError = ref(false)
 
 onMounted(async () => {
@@ -35,10 +41,11 @@ onMounted(async () => {
   }
 })
 
-function change(e) {
-  actIcon.value = e
+function change(command: string | number | object) {
+  const icon = command as Icon
+  actIcon.value = icon
   imageLoadError.value = false
-  emit('update:value', e.id)
+  emit('update:value', icon.id)
 }
 
 function onImageError() {
@@ -47,6 +54,13 @@ function onImageError() {
 
 function onImageLoad() {
   imageLoadError.value = false
+}
+
+/** 列表项图片加载失败时隐藏该图片 */
+function hideBrokenImage(e: Event) {
+  const target = e.target
+  if (target instanceof HTMLElement)
+    target.style.display = 'none'
 }
 </script>
 
@@ -81,7 +95,7 @@ function onImageLoad() {
             <img
               class="list-icon-image"
               :src="item.path"
-              @error="(e) => { e.target.style.display = 'none' }"
+              @error="hideBrokenImage"
             >
             <DefaultIcon
               name="default"
@@ -96,7 +110,7 @@ function onImageLoad() {
   </div>
 </template>
 
-<style lang="scss" scoped>
+<style scoped lang="scss">
 .icon-input-wrapper {
   width: 100%;
 }

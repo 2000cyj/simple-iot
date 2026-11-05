@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { AlarmStatistics } from '@/api/index'
+import type { AlarmPage, AlarmPageQuery, AlarmSeverity, AlarmStatus } from '@/types/api'
 import { Bell, Check, Close, Download, RefreshRight, View } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -8,15 +10,99 @@ import {
   alarmClearApi,
   alarmPageApi,
   alarmStatisticsApi,
-} from '@/api/index.js'
-import { useAccountStore } from '@/store/modules/account'
+} from '@/api/index'
 import IotTable from '@/components/IotTable.vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { useTable } from '@/composables/useTable.js'
+import { useTable } from '@/composables/useTable'
+import { useAccountStore } from '@/store/modules/account'
+
+/** element-plus 标签类型 */
+type TagType = 'primary' | 'success' | 'info' | 'warning' | 'danger'
+
+/** 严重程度标签 */
+interface SeverityTag {
+  /** 标签类型（历史代码里存在 '' 表示不指定样式，这里保留原值） */
+  type: string
+  /** 标签文案 */
+  text: string
+  /** 展示色值 */
+  color: string
+}
+
+/** 状态标签 */
+interface StatusTag {
+  /** 标签类型（历史代码里存在 '' 表示不指定样式，这里保留原值） */
+  type: string
+  /** 标签文案 */
+  text: string
+}
+
+/** 告警表格列配置 */
+interface AlarmTableColumn {
+  prop: string
+  label?: string
+  width?: number
+  minWidth?: number
+  align?: 'left' | 'center' | 'right'
+  /** 具名插槽名 */
+  slot?: string
+  showOverflowTooltip?: boolean
+}
+
+/** 详情弹窗的条目 */
+interface DetailItem {
+  label: string
+  value?: string
+  /** 是否用 el-tag 渲染 */
+  tag?: boolean
+  /** el-tag 的类型 */
+  tagType?: string
+  /** 是否占满整行 */
+  full?: boolean
+}
+
+/** 详情弹窗的分区 */
+interface DetailSection {
+  title: string
+  items: DetailItem[]
+}
+
+/** websocket 推送报文 */
+interface WsMessage {
+  channel?: string
+}
+
+/**
+ * 告警行：后端分页 VO `AlarmPageVo` 只有 createdTime，没有 clearBy
+ * （clearBy 只在实体 `Alarm` 上），但历史代码读的是 alarm.clearBy，
+ * 运行时恒为 undefined 并渲染成 '-'。这里在类型上补齐，保持运行时行为不变。
+ */
+type AlarmRow = AlarmPage & { clearBy?: string }
+
+/**
+ * 列表页查询参数。
+ *
+ * useTable 内部的 params 是 Record<string, unknown>，
+ * 这里在同一个响应式对象上补一份精确类型（运行时对象完全相同）。
+ */
+interface AlarmSearchParams {
+  /** 当前页码 */
+  page: number
+  /** 每页条数 */
+  size: number
+  /** 设备 Key */
+  deviceKey?: string
+  /** 告警类型 */
+  alarmType?: string
+  /** 严重程度 */
+  severity?: AlarmSeverity
+  /** 状态 */
+  status?: AlarmStatus
+}
 
 const { t } = useI18n()
 // 统计数据
-const statistics = ref({
+const statistics = ref<AlarmStatistics>({
   activeCount: 0,
   severityOptions: [],
   statusOptions: [],
@@ -24,13 +110,13 @@ const statistics = ref({
 
 // 告警详情弹窗
 const detailVisible = ref(false)
-const currentAlarm = ref(null)
+const currentAlarm = ref<AlarmRow | null>(null)
 
-const severityOpt = ref([])
-const statusOpt = ref([])
-let alarmWs = null
+const severityOpt = ref<AlarmStatistics['severityOptions']>([])
+const statusOpt = ref<AlarmStatistics['statusOptions']>([])
+let alarmWs: WebSocket | null = null
 
-const column = [
+const column: AlarmTableColumn[] = [
   {
     prop: 'severity',
     label: t('alarm.severity'),
@@ -91,10 +177,15 @@ const {
   loading,
   onPageChange,
   onSizeChange,
-} = useTable({
-  fetchApi: alarmPageApi,
+} = useTable<AlarmPage>({
+  // useTable 传入的是 Record<string, unknown>（分页字段 + 业务筛选字段），
+  // 这里转换回后端分页查询对象
+  fetchApi: query => alarmPageApi(query as unknown as AlarmPageQuery),
   defParams: {},
 })
+
+/** 查询表单绑定的参数（与 useTable 内部的 params 是同一个响应式对象） */
+const searchParams = params as unknown as AlarmSearchParams
 
 // 加载统计
 async function loadStatistics() {
@@ -116,7 +207,7 @@ async function refreshAlarmView() {
 }
 
 // 确认告警
-async function handleAcknowledge(row) {
+async function handleAcknowledge(row: AlarmPage) {
   try {
     await alarmAcknowledgeApi(row.id)
     ElMessage.success(t('alarm.alarm_page'))
@@ -132,7 +223,7 @@ async function handleAcknowledge(row) {
 }
 
 // 清除告警
-async function handleClear(row) {
+async function handleClear(row: AlarmPage) {
   try {
     await alarmClearApi(row.id)
     ElMessage.success(t('alarm.alarm_cleared'))
@@ -163,34 +254,48 @@ async function handleClearInDetail() {
 }
 
 // 查看详情
-function handleDetail(row) {
+function handleDetail(row: AlarmPage) {
   currentAlarm.value = row
   detailVisible.value = true
 }
 
+// 导出告警
+function onExport() {
+  window.open('/iot/alarm/export')
+}
+
+/**
+ * el-tag 的 type 属性只接受固定枚举，
+ * 而历史代码里存在 ''（表示不额外指定标签样式），这里做一次类型收敛，取值不变。
+ */
+function toTagType(type: string | undefined): TagType | undefined {
+  return type as TagType | undefined
+}
+
 // 获取严重程度标签
-function getSeverityTag(severity) {
-  const map = {
+function getSeverityTag(severity?: AlarmSeverity): SeverityTag {
+  const map: Record<AlarmSeverity, SeverityTag> = {
     CRITICAL: { type: 'danger', text: t('alarm.critical'), color: '#dc2626' },
     MAJOR: { type: 'warning', text: t('alarm.major'), color: '#ea580c' },
     MINOR: { type: 'info', text: t('alarm.minor'), color: '#f59e0b' },
     WARNING: { type: '', text: t('alarm.warning'), color: '#3b82f6' },
   }
-  return map[severity] || { type: '', text: severity, color: '#6b7280' }
+  // 后端理论上只会返回枚举内的值，但历史数据可能越界，这里统一兜底
+  return (severity && map[severity]) || { type: '', text: severity ?? '', color: '#6b7280' }
 }
 
 // 获取状态标签
-function getStatusTag(status) {
-  const map = {
+function getStatusTag(status?: AlarmStatus): StatusTag {
+  const map: Record<AlarmStatus, StatusTag> = {
     ACTIVE: { type: 'danger', text: t('alarm.active') },
     CLEARED: { type: 'success', text: t('alarm.cleared') },
     ACKNOWLEDGED: { type: 'warning', text: t('alarm.acknowledged') },
   }
-  return map[status] || { type: '', text: status }
+  return (status && map[status]) || { type: '', text: status ?? '' }
 }
 
 // 获取显示消息（直接显示后端返回的消息）
-function getDisplayMessage(row) {
+function getDisplayMessage(row: AlarmPage): string {
   if (row.message && row.message.trim()) {
     return row.message
   }
@@ -198,7 +303,7 @@ function getDisplayMessage(row) {
 }
 
 // 格式化时间
-function formatTime(timeStr) {
+function formatTime(timeStr?: string): string {
   if (!timeStr)
     return '-'
   // 处理 ISO 格式时间
@@ -216,12 +321,12 @@ function formatTime(timeStr) {
 }
 
 // 详情数据格式化
-const detailSections = computed(() => {
+const detailSections = computed<DetailSection[]>(() => {
   if (!currentAlarm.value)
     return []
 
   const alarm = currentAlarm.value
-  const sections = []
+  const sections: DetailSection[] = []
 
   // 基本信息
   sections.push({
@@ -265,7 +370,7 @@ const detailSections = computed(() => {
 
   // 触发数据详情
   if (alarm.details && Object.keys(alarm.details).length > 0) {
-    const detailItems = Object.entries(alarm.details).map(([key, value]) => ({
+    const detailItems: DetailItem[] = Object.entries(alarm.details).map(([key, value]) => ({
       label: key,
       value: typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value),
     }))
@@ -283,21 +388,29 @@ onMounted(() => {
   loadStatistics()
   // ponytail: WS refresh on new alarm, debounced via setTimeout to avoid bursts
   const token = useAccountStore().authorization?.tokenValue
-  if (!token) return
+  if (!token)
+    return
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
   alarmWs = new WebSocket(`${proto}://${location.host}/iot/ws/iot?token=${token}`)
-  let debounce = null
+  let debounce: ReturnType<typeof setTimeout> | null = null
   alarmWs.onmessage = (ev) => {
     try {
-      const msg = JSON.parse(ev.data)
+      const msg = JSON.parse(ev.data) as WsMessage
       if (msg.channel === 'alarm') {
-        clearTimeout(debounce)
-        debounce = setTimeout(() => { updatePage(); loadStatistics() }, 500)
+        clearTimeout(debounce ?? undefined)
+        debounce = setTimeout(() => {
+          updatePage()
+          loadStatistics()
+        }, 500)
       }
-    } catch {}
+    }
+    catch {}
   }
 })
-onUnmounted(() => { if (alarmWs) alarmWs.close() })
+onUnmounted(() => {
+  if (alarmWs)
+    alarmWs.close()
+})
 </script>
 
 <template>
@@ -327,15 +440,15 @@ onUnmounted(() => { if (alarmWs) alarmWs.close() })
       <el-form :inline="false" class="search-form">
         <div class="form-row">
           <el-form-item :label="t('alarm.key')">
-            <el-input v-model="params.deviceKey" clearable :placeholder="t('alarm.enter_device_key')" @keyup.enter="onSearch" />
+            <el-input v-model="searchParams.deviceKey" clearable :placeholder="t('alarm.enter_device_key')" @keyup.enter="onSearch" />
           </el-form-item>
 
           <el-form-item :label="t('alarm.alarm_type')">
-            <el-input v-model="params.alarmType" clearable :placeholder="t('alarm.enter_alarm_type')" @keyup.enter="onSearch" />
+            <el-input v-model="searchParams.alarmType" clearable :placeholder="t('alarm.enter_alarm_type')" @keyup.enter="onSearch" />
           </el-form-item>
 
           <el-form-item :label="t('alarm.severity')">
-            <el-select v-model="params.severity" clearable :placeholder="t('alarm.all')">
+            <el-select v-model="searchParams.severity" clearable :placeholder="t('alarm.all')">
               <el-option
                 v-for="item in severityOpt"
                 :key="item.value"
@@ -346,7 +459,7 @@ onUnmounted(() => { if (alarmWs) alarmWs.close() })
           </el-form-item>
 
           <el-form-item :label="t('common.status')">
-            <el-select v-model="params.status" clearable :placeholder="t('alarm.all')">
+            <el-select v-model="searchParams.status" clearable :placeholder="t('alarm.all')">
               <el-option
                 v-for="item in statusOpt"
                 :key="item.value"
@@ -365,7 +478,7 @@ onUnmounted(() => { if (alarmWs) alarmWs.close() })
           <el-button :icon="RefreshRight" @click="onReset">
             {{ t('common.reset') }}
           </el-button>
-          <el-button :icon="Download" @click="() => window.open('/iot/alarm/export')">
+          <el-button :icon="Download" @click="onExport">
             导出 Excel
           </el-button>
         </div>
@@ -385,12 +498,12 @@ onUnmounted(() => { if (alarmWs) alarmWs.close() })
         @size-change="onSizeChange"
       >
         <template #severity="{ row }">
-          <el-tag :type="getSeverityTag(row.severity).type" size="small">
+          <el-tag :type="toTagType(getSeverityTag(row.severity).type)" size="small">
             {{ getSeverityTag(row.severity).text }}
           </el-tag>
         </template>
         <template #status="{ row }">
-          <el-tag :type="getStatusTag(row.status).type" size="small">
+          <el-tag :type="toTagType(getStatusTag(row.status).type)" size="small">
             {{ getStatusTag(row.status).text }}
           </el-tag>
         </template>
@@ -454,7 +567,7 @@ onUnmounted(() => { if (alarmWs) alarmWs.close() })
             >
               <span class="item-label">{{ item.label }}</span>
               <span class="item-value">
-                <el-tag v-if="item.tag" :type="item.tagType" size="small">
+                <el-tag v-if="item.tag" :type="toTagType(item.tagType)" size="small">
                   {{ item.value }}
                 </el-tag>
                 <span v-else>{{ item.value }}</span>

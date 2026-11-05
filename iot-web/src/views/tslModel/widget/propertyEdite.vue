@@ -1,13 +1,101 @@
-<script lang="jsx" setup>
+<script setup lang="ts">
+import type {
+  DataTypeEnum,
+  KeyValue,
+  ModelProperty,
+  ModelPropertyUpdateQuery,
+  ProductPropertyAddQuery,
+  PropertyAccessMode,
+  StandardPropertyAddQuery,
+} from '@/types/api'
+import type { Option } from '@/types/common'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { customPropertyAddApi, dictListApi, standardPropertyAddApi, standardPropertyEditApi } from '@/api'
 import IconInput from '@/components/IconInput.vue'
-import { useForm } from '@/composables/useForm.js'
+import { useForm } from '@/composables/useForm'
 
-const props = defineProps(['datas', 'typeId', 'productId', 'modelValue', 'title'])
-const emits = defineEmits(['update', 'update:modelValue'])
+/**
+ * 属性表单。
+ *
+ * 物模型属性是动态 JSON 结构，这里只声明表单里真正可编辑的字段；
+ * 后端返回的属性对象（ModelProperty）字段更宽，合并进来时按本类型收窄。
+ */
+interface PropertyForm {
+  /** 主键（编辑态才有） */
+  id?: number
+  /** 属性名称 */
+  name?: string
+  /** 标识符 */
+  identifier?: string
+  /** 数据类型 */
+  dataType?: DataTypeEnum
+  /** 访问权限：r 只读 / rw 读写 */
+  accessMode?: PropertyAccessMode
+  /** 步长 */
+  step?: number
+  /** 最大值 */
+  max?: number
+  /** 最小值 */
+  min?: number
+  /** 计量单位 */
+  unit?: string
+  /** 计量单位名称 */
+  unitName?: string
+  /** 字符串长度 */
+  length?: number
+  /** 布尔类型 false 对应的值 */
+  bool0?: string
+  /** 布尔类型 true 对应的值 */
+  bool1?: string
+  /** 备注 */
+  remark?: string
+  /** 图标 ID */
+  iconId?: number
+  /** 产品类型 ID */
+  productTypeId?: number
+  /** 产品 ID */
+  productId?: number
+  /** 枚举值对照表 */
+  enums: KeyValue<number, string>[]
+}
+
+/**
+ * 提交形态：后端三个保存接口（标准新增 / 自定义新增 / 修改）的入参交集。
+ *
+ * 三个分支提交的是同一份表单数据，用交集描述可以保证任何一条分支都通过类型检查。
+ */
+type PropertyPayload = ModelPropertyUpdateQuery & ProductPropertyAddQuery & StandardPropertyAddQuery
+
+/** 数据类型分组：数值 / 枚举 / 文本 / 布尔 */
+type DataTypeCategory = 'number' | 'enum' | 'text' | 'bool'
+
+/** 数据类型下拉项 */
+interface DataTypeOption {
+  label: string
+  value: DataTypeEnum
+  type: DataTypeCategory
+}
+
+interface Props {
+  /** 编辑态回填的属性数据 */
+  datas?: ModelProperty | null
+  /** 产品类型 ID */
+  typeId?: number
+  /** 产品 ID */
+  productId?: number
+  /** 弹窗可见性 */
+  modelValue?: boolean
+  /** 弹窗标题 */
+  title?: string
+}
+
+const props = defineProps<Props>()
+const emits = defineEmits<{
+  'update': []
+  'update:modelValue': [value: boolean]
+}>()
 const { t } = useI18n()
 const rules = ref({
   name: [{ required: true, message: t('tsl.property_name_required'), trigger: 'blur' }],
@@ -15,7 +103,7 @@ const rules = ref({
   accessMode: [{ required: true, message: t('tsl.read_write_type_required'), trigger: 'change' }],
   dataType: [{ required: true, message: t('tsl.data_type_required'), trigger: 'change' }],
 })
-const form = ref({
+const form = ref<PropertyForm>({
   productTypeId: props.typeId,
   productId: props.productId,
   enums: [{
@@ -24,7 +112,7 @@ const form = ref({
   }],
   step: 1,
 })
-const unitListOpt = ref([])
+const unitListOpt = ref<Option[]>([])
 const { editRef, loading, onClose } = useForm({
   callback: () => {
     emits('update')
@@ -52,7 +140,7 @@ async function onSubmit() {
       : props.productId
         ? customPropertyAddApi
         : standardPropertyAddApi
-    await func(form.value)
+    await func(form.value as PropertyPayload)
     ElMessage.success(t('tsl.operation_succeeded'))
     emits('update')
     emits('update:modelValue', false)
@@ -65,7 +153,7 @@ async function onSubmit() {
   }
 }
 
-const dataTypeOpt = [
+const dataTypeOpt: DataTypeOption[] = [
   {
     label: t('tsl.int'),
     value: 1,
@@ -97,10 +185,10 @@ const dataTypeOpt = [
     type: 'bool',
   },
 ]
-const currentType = ref(1)
+const currentType = ref<DataTypeCategory | number>(1)
 
-function changeDataType(value) {
-  currentType.value = dataTypeOpt.find(item => item.value === value).type
+function changeDataType(value: DataTypeEnum) {
+  currentType.value = dataTypeOpt.find(item => item.value === value)!.type
 }
 
 function addEnumValue() {
@@ -116,13 +204,15 @@ function addEnumValue() {
   form.value.enums.push({ key, value: '' })
 }
 
-function removeEnumValue(index) {
+function removeEnumValue(index: number) {
   form.value.enums.splice(index, 1)
 }
 
 if (props?.datas) {
-  form.value = { ...form.value, ...props.datas }
-  currentType.value = dataTypeOpt.find(item => item.value === props.datas.dataType)?.type || 1
+  // 后端返回的属性对象比表单更宽（取值说明、数据类型名称等可能缺失），
+  // 合并后仍按表单类型使用。
+  form.value = { ...form.value, ...props.datas } as PropertyForm
+  currentType.value = dataTypeOpt.find(item => item.value === props.datas?.dataType)?.type || 1
 }
 
 dictListApi('analog_quantity')
@@ -130,7 +220,7 @@ dictListApi('analog_quantity')
     unitListOpt.value = data
   })
 
-function changeUnit(value) {
+function changeUnit(value: string | number) {
   form.value.unitName = unitListOpt.value.find(item => item.value === value)?.label || ''
 }
 </script>

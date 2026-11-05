@@ -1,20 +1,61 @@
-<script setup>
+<script setup lang="ts">
+import type { PushDeliveryResult } from '@/api/index'
+import type { TableParams } from '@/composables/useTable'
+import type { PushConfigPage, PushConfigPageQuery, PushConfigType } from '@/types/api'
 import { Delete, Edit, Promotion, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { pushConfigDeleteApi, pushConfigPageApi, pushConfigTestApi } from '@/api/index.js'
+import { pushConfigDeleteApi, pushConfigPageApi, pushConfigTestApi } from '@/api/index'
 import IotTable from '@/components/IotTable.vue'
-import { useTable } from '@/composables/useTable.js'
+import { useTable } from '@/composables/useTable'
 import EditDia from '@/views/push-config/widget/editDia.vue'
 
+/**
+ * 列表视图的列配置（运行时数组）。
+ *
+ * 字段含义与 IotTable 的列定义保持一致：
+ * - `prop` / `label` 字段名与表头、`width` / `minWidth` 列宽
+ * - `slot` 自定义插槽名、`fixed` 固定列、`showOverflowTooltip` 溢出提示
+ * - `render` 自定义单元格渲染（返回纯文本）
+ */
+interface TableColumn {
+  /** 字段名 */
+  prop?: string
+  /** 表头文案 */
+  label?: string
+  /** 列宽 */
+  width?: number
+  /** 最小列宽 */
+  minWidth?: number
+  /** 自定义插槽名 */
+  slot?: string
+  /** 固定列 */
+  fixed?: 'left' | 'right' | boolean
+  /** 内容过长时是否显示 tooltip */
+  showOverflowTooltip?: boolean
+  /** 自定义渲染（返回纯文本） */
+  render?: (scope: { row: PushConfigRow }) => string
+}
+
+/**
+ * 表格行数据。
+ *
+ * 后端 `PushConfigPageVo` 没有返回 `httpSignEnabled`，
+ * 但测试弹窗会读取它（判断是否提示 HMAC 签名），这里按「可能存在」建模。
+ */
+interface PushConfigRow extends PushConfigPage {
+  /** 是否启用 HTTP HMAC 签名（后端分页项未返回） */
+  httpSignEnabled?: boolean
+}
+
 const { t } = useI18n()
-const typeOpt = [
+const typeOpt: Array<{ label: string, value: PushConfigType }> = [
   { label: t('push_config.http'), value: 'HTTP' },
   { label: t('push_config.mqtt_forwarding'), value: 'MQTT' },
 ]
 
-const column = [
+const column: TableColumn[] = [
   {
     prop: 'name',
     label: t('push_config.config_name'),
@@ -24,7 +65,7 @@ const column = [
     prop: 'type',
     label: t('push_config.type_2'),
     width: 120,
-    render({ row }) {
+    render({ row }: { row: PushConfigRow }) {
       return typeOpt.find(item => item.value === row.type)?.label || '-'
     },
   },
@@ -38,7 +79,7 @@ const column = [
     prop: 'endpoint',
     label: 'URL/Topic',
     minWidth: 200,
-    render({ row }) {
+    render({ row }: { row: PushConfigRow }) {
       return row.httpUrl || row.mqttTopic || '-'
     },
   },
@@ -63,7 +104,7 @@ const column = [
 ]
 
 const {
-  params,
+  params: tableParams,
   dialogVisible,
   updatePage,
   onSearch,
@@ -78,27 +119,47 @@ const {
   currentItem,
   onPageChange,
   onSizeChange,
-} = useTable({
-  deleteApi: pushConfigDeleteApi,
-  fetchApi: pushConfigPageApi,
+} = useTable<PushConfigRow>({
+  deleteApi: id => pushConfigDeleteApi(id as number),
+  fetchApi: query => pushConfigPageApi(query as unknown as PushConfigPageQuery),
   diaName: t('push_config.push_config'),
   defParams: {},
 })
+
+/**
+ * 搜索栏查询参数。
+ *
+ * useTable 的 `params` 是 `Record<string, unknown>`，直接用在 v-model 上
+ * 会让绑定值退化成 unknown，这里补一个业务字段视图（运行时仍是同一个对象）。
+ */
+interface PushConfigSearchParams {
+  /** 配置名称 */
+  name?: string
+  /** 配置类型 */
+  type?: PushConfigType
+  /** 是否启用 */
+  isEnabled?: boolean
+}
+
+const params = tableParams as TableParams & PushConfigSearchParams
 
 function closeEdite() {
   updatePage()
 }
 
+/** 测试推送弹窗 */
 const testDialogVisible = ref(false)
 const testLoading = ref(false)
-const testTarget = ref(null)
+const testTarget = ref<PushConfigRow | null>(null)
+/** 测试推送表单 */
 const testForm = ref({
   eventType: 'push.test',
   payload: '{\n  "temperature": 36.5,\n  "humidity": 60\n}',
 })
-const testResult = ref(null)
+/** 测试推送结果 */
+const testResult = ref<PushDeliveryResult | null>(null)
 
-function openTestDialog(row) {
+function openTestDialog(row: PushConfigRow) {
   testTarget.value = row
   testResult.value = null
   testForm.value = {
@@ -108,13 +169,16 @@ function openTestDialog(row) {
   testDialogVisible.value = true
 }
 
-function parseTestPayload() {
+/**
+ * 解析测试载荷：优先按 JSON 解析，失败则原样当作纯文本提交。
+ */
+function parseTestPayload(): unknown {
   const payload = testForm.value.payload
   if (!payload || !payload.trim()) {
     return {}
   }
   try {
-    return JSON.parse(payload)
+    return JSON.parse(payload) as unknown
   }
   catch {
     return payload
@@ -132,7 +196,7 @@ async function runTestPush() {
       eventType: testForm.value.eventType || 'push.test',
       payload: parseTestPayload(),
     })
-    const data = res?.data || res
+    const data = (res?.data || res) as PushDeliveryResult
     testResult.value = data
     if (data?.success) {
       ElMessage.success(t('push_config.test_push_succeeded'))
@@ -283,12 +347,12 @@ onMounted(() => {
         <el-alert
           v-if="testResult"
           class="test-result"
-          :type="testResult.success ? 'success' : 'error'"
+          :type="testResult?.success ? 'success' : 'error'"
           show-icon
           :closable="false"
-          :title="testResult.success ? t('push_config.testresult_message_testresult_success') : t('push_config.push_test_failed')"
+          :title="testResult?.success ? t('push_config.testresult_message_testresult_success') : t('push_config.push_test_failed')"
         >
-          <template v-if="testResult.responseBody" #default>
+          <template v-if="testResult?.responseBody" #default>
             <pre>{{ testResult.responseBody }}</pre>
           </template>
         </el-alert>

@@ -1,16 +1,73 @@
-<script setup>
+<script setup lang="ts">
+import type { Dashboard } from '@/types/api'
 import { Delete, Edit, Plus, View } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { dashboardDelete, dashboardList } from '@/api/dashboard'
 import WidgetRenderer from './WidgetRenderer.vue'
 
+/** 支持的组件类型 */
+type WidgetType =
+  | 'line-chart'
+  | 'gauge'
+  | 'value-card'
+  | 'data-table'
+  | 'bar-chart'
+  | 'device-grid'
+  | 'alarm-list'
+
+/** 组件配置 */
+interface WidgetConfig {
+  /** 组件类型 */
+  type?: WidgetType
+  /** 组件标题（配置面板里可覆盖） */
+  title?: string
+  /** 关联产品 ID */
+  productId?: number | null
+  /** 设备 Key */
+  deviceKey?: string
+  /** 属性标识符 */
+  identifier?: string
+  /** 时间范围（小时） */
+  timeRange?: number
+  /** 单位 */
+  unit?: string
+  /** 仪表盘最小值 */
+  min?: number
+  /** 仪表盘最大值 */
+  max?: number
+}
+
+/** 仪表盘组件（同时也是 vue-grid-layout 的布局项） */
+interface DashboardWidget {
+  /** vue-grid-layout 的布局项 ID */
+  i: string
+  x: number
+  y: number
+  w: number
+  h: number
+  /** 组件标题 */
+  title?: string
+  /** 组件类型（与 config.type 二选一，config 优先） */
+  type?: WidgetType
+  /** 组件配置（编辑器创建的组件必带 config） */
+  config: WidgetConfig
+}
+
 const router = useRouter()
-const dashboards = ref([])
+const dashboards = ref<Dashboard[]>([])
 const loading = ref(false)
 const previewVisible = ref(false)
-const previewDashboard = ref(null)
+const previewDashboard = ref<Dashboard | null>(null)
+
+/**
+ * 预览用的组件列表：后端 layout 的元素类型是 Record<string, unknown>，
+ *  这里收敛成渲染器认识的 DashboardWidget 结构
+ */
+const previewWidgets = computed<DashboardWidget[]>(
+  () => (previewDashboard.value?.layout ?? []) as unknown as DashboardWidget[],
+)
 
 async function loadList() {
   loading.value = true
@@ -23,7 +80,7 @@ async function loadList() {
   }
 }
 
-function onEdit(id) {
+function onEdit(id: number) {
   router.push(`/dashboard/editor/${id}`)
 }
 
@@ -31,12 +88,12 @@ function onCreate() {
   router.push('/dashboard/editor')
 }
 
-function onPreview(d) {
+function onPreview(d: Dashboard) {
   previewDashboard.value = d
   previewVisible.value = true
 }
 
-async function onDelete(d) {
+async function onDelete(d: Dashboard) {
   await ElMessageBox.confirm(`确认删除「${d.name}」?`, '提示', { type: 'warning' })
   await dashboardDelete(d.id)
   ElMessage.success('已删除')
@@ -112,7 +169,7 @@ onMounted(loadList)
       <div v-if="previewDashboard?.layout?.length" class="preview-container">
         <GridLayout
           v-if="previewDashboard"
-          :layout="previewDashboard.layout"
+          :layout="previewWidgets"
           :col-num="12"
           :row-height="60"
           :is-draggable="false"
@@ -120,7 +177,7 @@ onMounted(loadList)
           :margin="[8, 8]"
         >
           <GridItem
-            v-for="item in previewDashboard.layout"
+            v-for="item in previewWidgets"
             :key="item.i"
             :x="item.x"
             :y="item.y"

@@ -1,27 +1,57 @@
-<script lang="jsx" setup>
+<script setup lang="ts">
+import type { FormRules, UploadRequestOptions } from 'element-plus'
+import type { Product, ProductAddQuery, ProductType, ProductUpdateQuery } from '@/types/api'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { productAddApi, productEditeApi, uploadMoreApi } from '@/api'
-import { useForm } from '@/composables/useForm.js'
+import { useForm } from '@/composables/useForm'
 
-const props = defineProps(['datas', 'productTypeList', 'modelValue'])
-const emits = defineEmits(['update', 'update:modelValue'])
+/**
+ * 产品表单模型。
+ *
+ * 新增与修改走的是两个不同的请求体，这里取两者的交集：
+ * 既包含新增必填项，也包含修改用的 `id`。
+ */
+type ProductForm = ProductAddQuery & ProductUpdateQuery
+
+interface Props {
+  /** 当前编辑的产品，新增时为 null */
+  datas?: Partial<Product> | null
+  /** 产品类型下拉选项 */
+  productTypeList?: ProductType[]
+  /** 弹窗可见性 */
+  modelValue?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  datas: null,
+  productTypeList: () => [],
+  modelValue: false,
+})
+
+const emit = defineEmits<{
+  /** 保存成功，通知父级刷新列表 */
+  'update': []
+  /** 弹窗可见性变化 */
+  'update:modelValue': [value: boolean]
+}>()
+
 const { t } = useI18n()
-const rules = ref({
+const rules = ref<FormRules>({
   productTypeId: [{ required: true, message: t('product.product_type_required'), trigger: 'change' }],
   model: [{ required: true, message: t('product.product_model_required'), trigger: 'blur' }],
 })
 
-const { form, onSubmit: handleSubmit, editRef, loading, onClose } = useForm({
+const { form, onSubmit: handleSubmit, editRef, loading, onClose } = useForm<ProductForm>({
   api: props.datas ? productEditeApi : productAddApi,
   callback: () => {
-    emits('update')
-    emits('update:modelValue', false)
+    emit('update')
+    emit('update:modelValue', false)
   },
   closeCallback: () => {
-    emits('update:modelValue', false)
+    emit('update:modelValue', false)
   },
 })
 
@@ -31,8 +61,16 @@ function onSubmit() {
   handleSubmit()
 }
 
+/**
+ * 判断上传响应里是否带 `{ url }` 结构。
+ * 后端历史上返回过数组 `["/iot/file/xxx.png"]`，这里兼容两种形态。
+ */
+function isFileUrlPayload(value: unknown): value is { url?: string } {
+  return typeof value === 'object' && value !== null && 'url' in value
+}
+
 // 图片上传处理
-async function handleUpload(options) {
+async function handleUpload(options: UploadRequestOptions) {
   const { file } = options
   const isImage = file.type.startsWith('image/')
   const isLt2M = file.size / 1024 / 1024 < 2
@@ -52,7 +90,14 @@ async function handleUpload(options) {
     formData.append('file', file)
     const res = await uploadMoreApi(formData)
     // 后端返回的是数组格式 ["/iot/file/xxx.png"]
-    const url = res.data?.url || (Array.isArray(res.data) ? res.data[0] : null)
+    const payload: unknown = res.data
+    let url: string | undefined
+    if (isFileUrlPayload(payload)) {
+      url = payload.url
+    }
+    else if (Array.isArray(payload)) {
+      url = payload[0] as string | undefined
+    }
     if (url) {
       form.value.icon = url
       ElMessage.success(t('product.upload_success'))

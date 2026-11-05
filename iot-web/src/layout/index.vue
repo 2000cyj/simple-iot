@@ -1,7 +1,7 @@
-<script lang="jsx" setup>
+<script setup lang="ts">
+import { useSidebar } from '@/composables/useSidebar'
 import headers from './widget/header.vue'
-import slider from './widget/slider'
-import { useSidebar } from '@/composables/useSidebar.js'
+import slider from './widget/slider.vue'
 
 const { isMobileOpen, closeMobile } = useSidebar()
 </script>

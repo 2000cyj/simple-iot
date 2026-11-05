@@ -1,25 +1,35 @@
-<script setup>
+<script setup lang="ts">
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
-defineProps({
-  breadcrumbs: {
-    type: Array,
-    required: true,
-    default: () => [],
-  },
-  backIcon: {
-    type: String,
-    default: '/src/assets/backico.svg',
-  },
+/** 面包屑条目 */
+export interface BreadcrumbItem {
+  /** 展示文案（i18nKey 存在且可翻译时优先使用 i18nKey） */
+  label?: string
+  /** 国际化 key */
+  i18nKey?: string
+  /** 跳转路径 */
+  path?: string
+}
+
+interface Props {
+  /** 面包屑条目列表 */
+  breadcrumbs: BreadcrumbItem[]
+  /** 返回按钮图标地址 */
+  backIcon?: string
+}
+
+withDefaults(defineProps<Props>(), {
+  breadcrumbs: () => [],
+  backIcon: '/src/assets/backico.svg',
 })
 
 const router = useRouter()
 const { t, te } = useI18n()
 const separatorIcon = ArrowRight
 
-function breadcrumbLabel(item) {
+function breadcrumbLabel(item: BreadcrumbItem): string {
   if (item?.i18nKey && te(item.i18nKey))
     return t(item.i18nKey)
   return item?.label || ''

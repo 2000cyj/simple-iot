@@ -1,13 +1,15 @@
-<script setup>
-defineProps({
-  tslProp: {
-    type: Object,
-    required: true,
-  },
-  value: {
-    type: [String, Number],
-    default: '-',
-  },
+<script setup lang="ts">
+import type { TslProperty } from '@/types/api'
+
+interface Props {
+  /** 物模型属性定义 */
+  tslProp: TslProperty
+  /** 属性当前值 */
+  value?: string | number
+}
+
+withDefaults(defineProps<Props>(), {
+  value: '-',
 })
 </script>
 

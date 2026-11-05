@@ -88,6 +88,9 @@ const {
   defParams: {},
 })
 
+// MessageRecivePageQuery narrows this field on useTable's generic query params.
+const messageReceiveParams = params as typeof params & Pick<MessageRecivePageQuery, 'notifyType'>
+
 function closeEdite() {
   updatePage()
 }
@@ -118,7 +121,7 @@ onMounted(() => {
         <div class="search-field">
           <label class="field-label">{{ t('system.notification_type') }}</label>
           <el-select
-            v-model="params.notifyType"
+            v-model="messageReceiveParams.notifyType"
             :placeholder="t('system.select_notification_type')"
             filterable
             clearable

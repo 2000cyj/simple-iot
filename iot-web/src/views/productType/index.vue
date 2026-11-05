@@ -1,19 +1,49 @@
-<script setup>
+<script setup lang="ts">
+import type { ProductTypeQuery } from '@/api/index'
+import type { TableParams } from '@/composables/useTable'
+import type { ProductType } from '@/types/api'
 import { Delete, Edit, Plus, RefreshRight, Setting } from '@element-plus/icons-vue'
 import { nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { productTypeDelApi, productTypeListApi } from '@/api/index.js'
+import { productTypeDelApi, productTypeListApi } from '@/api/index'
 import IotTable from '@/components/IotTable.vue'
-import { useTable } from '@/composables/useTable.js'
+import { useTable } from '@/composables/useTable'
 import EditDia from '@/views/productType/widget/editDia.vue'
+
+/**
+ * 列表视图的列配置（运行时数组）。
+ *
+ * 字段含义与 IotTable 的列定义保持一致：
+ * - `prop` / `label` 字段名与表头、`width` 列宽
+ * - `slot` 自定义插槽名
+ * - `formatter` 自定义单元格格式化（返回纯文本）
+ */
+interface TableColumn {
+  /** 字段名 */
+  prop?: string
+  /** 表头文案 */
+  label?: string
+  /** 列宽 */
+  width?: number
+  /** 自定义插槽名 */
+  slot?: string
+  /** 单元格格式化（返回纯文本） */
+  formatter?: (row: ProductType, column: unknown, cellValue: unknown, index?: number) => string
+}
+
+/** IotTable 通过 defineExpose 暴露的方法，本页只用到 refresh */
+interface IotTableInstance {
+  /** 重新拉取数据 */
+  refresh: () => void
+}
 
 const { t } = useI18n()
 const router = useRouter()
 const parentId = ref(-1)
-const iotTableRef = ref()
+const iotTableRef = ref<IotTableInstance | null>(null)
 
-const column = [
+const column: TableColumn[] = [
   {
     prop: 'cz',
     width: 60,
@@ -27,7 +57,7 @@ const column = [
     prop: 'status',
     label: t('common.status'),
     width: 100,
-    formatter(row) {
+    formatter(row: ProductType) {
       return row.status ? t('common.enable') : t('product_type.disable')
     },
   },
@@ -44,21 +74,34 @@ const column = [
 ]
 
 const {
-  params,
+  params: tableParams,
   dialogVisible,
   onDelete,
   onAdd,
   onEdit,
   diaTitle,
   currentItem,
-} = useTable({
-  deleteApi: productTypeDelApi,
-  fetchApi: productTypeListApi,
+} = useTable<ProductType>({
+  deleteApi: id => productTypeDelApi(id as number),
+  fetchApi: query => productTypeListApi(query as unknown as ProductTypeQuery),
   diaName: t('menu.productType'),
   defParams: {
     withChild: true,
   },
 })
+
+/**
+ * 搜索栏查询参数。
+ *
+ * useTable 的 `params` 是 `Record<string, unknown>`，直接用在 v-model 上
+ * 会让绑定值退化成 unknown，这里补一个业务字段视图（运行时仍是同一个对象）。
+ */
+interface ProductTypeSearchParams {
+  /** 类型名称 */
+  name?: string
+}
+
+const params = tableParams as TableParams & ProductTypeSearchParams
 
 // 搜索时刷新 IotTable
 function onSearch() {
@@ -76,14 +119,14 @@ function closeEdite() {
   iotTableRef.value?.refresh()
 }
 
-function onAddChild(row) {
+function onAddChild(row: ProductType) {
   parentId.value = row.id
   nextTick(() => {
     dialogVisible.value = true
   })
 }
 
-function tslConfig(row) {
+function tslConfig(row: ProductType) {
   router.push(`/tslModel?typeId=${row.id}`)
 }
 </script>

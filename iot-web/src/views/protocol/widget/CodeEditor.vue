@@ -1,28 +1,29 @@
-<script setup>
+<script setup lang="ts">
 import { computed, ref } from 'vue'
 
-const props = defineProps({
-  modelValue: {
-    type: String,
-    default: '',
-  },
-  language: {
-    type: String,
-    default: 'javascript',
-  },
-  height: {
-    type: [String, Number],
-    default: 400,
-  },
-  readonly: {
-    type: Boolean,
-    default: false,
-  },
+interface Props {
+  /** 编辑器内容 */
+  modelValue?: string
+  /** 脚本语言 */
+  language?: string
+  /** 编辑器高度（数字按 px 处理） */
+  height?: string | number
+  /** 是否只读 */
+  readonly?: boolean
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: '',
+  language: 'javascript',
+  height: 400,
+  readonly: false,
 })
 
-const emits = defineEmits(['update:modelValue'])
+const emits = defineEmits<{
+  'update:modelValue': [value: string]
+}>()
 
-const textareaRef = ref(null)
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const isFocused = ref(false)
 
 // Monaco 编辑器高度
@@ -31,15 +32,15 @@ const editorHeight = computed(() => {
 })
 
 // 更新值
-function updateValue(event) {
-  emits('update:modelValue', event.target.value)
+function updateValue(event: Event) {
+  emits('update:modelValue', (event.target as HTMLTextAreaElement).value)
 }
 
 // Tab 键支持
-function handleKeyDown(event) {
+function handleKeyDown(event: KeyboardEvent) {
   if (event.key === 'Tab') {
     event.preventDefault()
-    const textarea = event.target
+    const textarea = event.target as HTMLTextAreaElement
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
     const value = textarea.value
@@ -58,7 +59,7 @@ defineExpose({
   getValue() {
     return textareaRef.value?.value || props.modelValue
   },
-  setValue(value) {
+  setValue(value: string) {
     if (textareaRef.value) {
       textareaRef.value.value = value
     }

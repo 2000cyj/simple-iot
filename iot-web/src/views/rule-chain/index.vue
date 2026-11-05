@@ -1,27 +1,48 @@
-<script setup>
+<script setup lang="ts">
+import type { RuleChainPage, RuleSourceType } from '@/types/api'
+import type { BaseResult, PageResult } from '@/types/common'
 import { Delete, Edit, Operation, Plus, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import {
   ruleChainDeleteApi,
   ruleChainPageApi,
   ruleChainToggleApi,
-} from '@/api/index.js'
+} from '@/api/index'
 import IotTable from '@/components/IotTable.vue'
-import { useTable } from '@/composables/useTable.js'
+import { useTable } from '@/composables/useTable'
 
 const { t } = useI18n()
 const router = useRouter()
 
-const sourceTypeOpt = [
+/** 数据源类型下拉项 */
+interface SourceTypeOption {
+  label: string
+  value: RuleSourceType
+}
+
+const sourceTypeOpt: SourceTypeOption[] = [
   { label: t('ruleChain.product_2'), value: 'PRODUCT' },
   { label: t('ruleChain.device_group'), value: 'DEVICE_GROUP' },
   { label: t('ruleChain.specific_device_2'), value: 'DEVICE' },
 ]
 
-const column = [
+/** 表格列配置 */
+interface RuleChainColumn {
+  prop: string
+  label: string
+  minWidth?: number
+  width?: number
+  align?: 'left' | 'center' | 'right'
+  fixed?: 'left' | 'right' | boolean
+  slot?: string
+  showOverflowTooltip?: boolean
+  formatter?: (row: RuleChainPage) => string
+}
+
+const column: RuleChainColumn[] = [
   {
     prop: 'name',
     label: t('ruleChain.rule_name_3'),
@@ -92,15 +113,32 @@ const {
   onDelete,
   onPageChange,
   onSizeChange,
-} = useTable({
-  deleteApi: ruleChainDeleteApi,
-  fetchApi: ruleChainPageApi,
+} = useTable<RuleChainPage>({
+  // useTable 的契约是宽松类型（fetchApi 收 Record<string, unknown>、deleteApi 收 number | string），
+  // 这里做一次显式桥接；运行时行为不变。
+  deleteApi: ruleChainDeleteApi as unknown as (id: number | string) => Promise<unknown>,
+  fetchApi: ruleChainPageApi as unknown as (
+    params: Record<string, unknown>
+  ) => Promise<BaseResult<PageResult<RuleChainPage>>>,
   diaName: t('ruleChain.rule'),
   defParams: {},
 })
 
+const ruleNameFilter = computed({
+  get: () => params.name as string,
+  set: (value: string) => { params.name = value },
+})
+const sourceTypeFilter = computed<RuleSourceType | undefined>({
+  get: () => params.sourceType as RuleSourceType | undefined,
+  set: (value) => { params.sourceType = value },
+})
+const enabledFilter = computed<boolean | null>({
+  get: () => params.isEnabled as boolean | null,
+  set: (value) => { params.isEnabled = value },
+})
+
 // 编辑
-function onEdit(row) {
+function onEdit(row: RuleChainPage) {
   router.push(`/rule-chain/editor/${row.id}`)
 }
 
@@ -110,7 +148,7 @@ function onAdd() {
 }
 
 // 切换启用状态
-async function onToggle(row) {
+async function onToggle(row: RuleChainPage) {
   try {
     await ruleChainToggleApi(row.id, !row.isEnabled)
     row.isEnabled = !row.isEnabled
@@ -148,12 +186,12 @@ onMounted(() => {
       <el-form :inline="false" class="search-form">
         <div class="form-row">
           <el-form-item :label="t('ruleChain.rule_name_3')">
-            <el-input v-model="params.name" clearable :placeholder="t('ruleChain.enter_rule_name')" @keyup.enter="onSearch" />
+            <el-input v-model="ruleNameFilter" clearable :placeholder="t('ruleChain.enter_rule_name')" @keyup.enter="onSearch" />
           </el-form-item>
 
           <el-form-item :label="t('ruleChain.data_source_type')">
             <el-select
-              v-model="params.sourceType"
+              v-model="sourceTypeFilter"
               :placeholder="t('common.please_select')"
               filterable
               clearable
@@ -168,7 +206,7 @@ onMounted(() => {
           </el-form-item>
 
           <el-form-item :label="t('common.status')">
-            <el-select v-model="params.isEnabled" :placeholder="t('common.please_select')" clearable>
+            <el-select v-model="enabledFilter" :placeholder="t('common.please_select')" clearable>
               <el-option :label="t('common.enable')" :value="true" />
               <el-option :label="t('ruleChain.disable')" :value="false" />
             </el-select>

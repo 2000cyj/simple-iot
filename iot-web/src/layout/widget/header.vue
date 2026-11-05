@@ -1,11 +1,11 @@
-<script setup>
+<script setup lang="ts">
 import { ArrowDown, Check, Expand, Fold, Lightning, Monitor, Moon, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
-import { useSidebar } from '@/composables/useSidebar.js'
-import { useTheme } from '@/composables/useTheme.js'
+import { useSidebar } from '@/composables/useSidebar'
+import { useTheme } from '@/composables/useTheme'
 import { useAccountStore } from '@/store'
 
 const router = useRouter()
@@ -79,13 +79,13 @@ function getThemeIcon() {
               v-for="option in themeOptions"
               :key="option.value"
               :command="option.value"
-              :class="{ 'is-active': theme.value === option.value }"
+              :class="{ 'is-active': theme === option.value }"
             >
               <el-icon :size="18">
                 <component :is="option.icon" />
               </el-icon>
               <span>{{ option.label }}</span>
-              <el-icon v-if="theme.value === option.value" class="check-icon" :size="16">
+              <el-icon v-if="theme === option.value" class="check-icon" :size="16">
                 <Check />
               </el-icon>
             </el-dropdown-item>
@@ -332,12 +332,22 @@ function getThemeIcon() {
 }
 
 /* 移动端适配 */
-.mobile-only { display: none; }
+.mobile-only {
+  display: none;
+}
 
 @media (max-width: 768px) {
-  .desktop-only { display: none; }
-  .mobile-only { display: flex; }
-  .header-right .theme-label { display: none; }
-  .logo-text { font-size: 14px; }
+  .desktop-only {
+    display: none;
+  }
+  .mobile-only {
+    display: flex;
+  }
+  .header-right .theme-label {
+    display: none;
+  }
+  .logo-text {
+    font-size: 14px;
+  }
 }
 </style>

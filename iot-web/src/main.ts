@@ -25,7 +25,7 @@ import '@/styles/global.scss'
 // 权限控制
 import './permission'
 
-async function setupApp() {
+async function setupApp(): Promise<void> {
   const app = createApp(App)
 
   for (const [key, component] of Object.entries(ElementPlusIconsVue)) {

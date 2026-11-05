@@ -1,33 +1,105 @@
-<script setup>
+<script setup lang="ts">
+import type { FormInstance, FormItemRule } from 'element-plus'
+import type { Device, KeyValue } from '@/types/api'
 import { ElMessage } from 'element-plus'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { callDeviceServiceApi } from '@/api/index.js'
+import { callDeviceServiceApi } from '@/api/index'
 
-const props = defineProps({
-  deviceDetail: {
-    type: Object,
-    required: true,
-  },
-})
+/**
+ * 页面分支判断用的数据类型。
+ *
+ * 注意：后端 `TslProperty.dataType` 实际下发的是数字枚举（见 `src/types/api.ts` 的
+ * `DataTypeEnum`），而本组件的历史代码是按字符串分支判断的，
+ * 因此这里按「前端视图模型」单独建模，详见交付报告。
+ */
+type ServiceDataType = 'int' | 'float' | 'double' | 'bool' | 'text' | 'string' | 'date'
+
+/** 服务入参 / 出参（前端视图模型） */
+interface ServiceParam {
+  /** 参数标识符 */
+  identifier: string
+  /** 参数名称 */
+  name?: string
+  /** 是否必选 */
+  required?: boolean
+  /** 数据类型（按字符串分支处理） */
+  dataType?: ServiceDataType
+  /** 枚举值对照表 */
+  enums?: KeyValue<number, string>[]
+  /** 最小值 */
+  min?: number
+  /** 最大值 */
+  max?: number
+  /** 步长 */
+  step?: number
+  /** 字符串最大长度 */
+  maxLength?: number
+  /** 开关开启文案 */
+  trueText?: string
+  /** 开关关闭文案 */
+  falseText?: string
+  /** 字段说明 */
+  description?: string
+}
+
+/** 服务定义（前端视图模型） */
+interface ServiceDef {
+  /** 服务标识符 */
+  identifier: string
+  /** 服务名称 */
+  name?: string
+  /** 服务描述 */
+  remark?: string
+  /** 是否异步 */
+  async?: boolean
+  /** 是否必选 */
+  required?: boolean
+  /** 入参 */
+  inputParams?: ServiceParam[]
+  /** 出参 */
+  outputParams?: ServiceParam[]
+}
+
+interface Props {
+  /** 设备详情 */
+  deviceDetail: Device
+}
+
+const props = defineProps<Props>()
 
 const { t } = useI18n()
 
 // 获取设备的服务列表
-const serviceList = computed(() => {
-  return props.deviceDetail?.tslModel?.services || []
-})
+const serviceList = computed<ServiceDef[]>(() =>
+  (props.deviceDetail?.tslModel?.services ?? []) as unknown as ServiceDef[],
+)
 
-const activeService = ref(null)
+const activeService = ref<ServiceDef | null>(null)
 const serviceDialogVisible = ref(false)
-const serviceForm = ref({})
-const serviceFormRef = ref(null)
+const serviceForm = ref<Record<string, string | number | boolean | Date>>({})
+const serviceFormRef = ref<FormInstance | null>(null)
 const loading = ref(false)
-const callResult = ref(null)
+const callResult = ref<Record<string, unknown> | null>(null)
 const showResult = ref(false)
 
+function getSwitchValue(identifier: string): boolean | string | number {
+  const value = serviceForm.value[identifier]
+  return typeof value === 'boolean' || typeof value === 'string' || typeof value === 'number' ? value : false
+}
+
+function getDateValue(identifier: string): Date | string | number | null {
+  const value = serviceForm.value[identifier]
+  return value instanceof Date || typeof value === 'string' || typeof value === 'number' ? value : null
+}
+
+function getTextValue(identifier: string): string | number | undefined {
+  const value = serviceForm.value[identifier]
+  return typeof value === 'string' || typeof value === 'number' ? value : undefined
+}
+
 // 显示服务调用对话框
-function showServiceDialog(service) {
+function showServiceDialog(service: ServiceDef) {
   activeService.value = service
   resetForm()
   serviceDialogVisible.value = true
@@ -53,7 +125,7 @@ function resetForm() {
 }
 
 // 根据参数类型获取默认值
-function getDefaultValue(param) {
+function getDefaultValue(param: ServiceParam): string | number | boolean | Date {
   // 枚举类型默认取第一个值或空
   if (param.enums && param.enums.length > 0) {
     return param.enums[0]?.key ?? ''
@@ -76,8 +148,8 @@ function getDefaultValue(param) {
 }
 
 // 获取表单验证规则
-function getValidationRules(param) {
-  const rules = []
+function getValidationRules(param: ServiceParam): FormItemRule[] {
+  const rules: FormItemRule[] = []
 
   if (param.required) {
     const message = param.dataType === 'bool'
@@ -91,7 +163,7 @@ function getValidationRules(param) {
   }
 
   // 数值范围验证
-  if (['int', 'float', 'double'].includes(param.dataType)) {
+  if (param.dataType !== undefined && ['int', 'float', 'double'].includes(param.dataType)) {
     if (param.min !== undefined || param.max !== undefined) {
       rules.push({
         type: 'number',
@@ -107,7 +179,7 @@ function getValidationRules(param) {
   }
 
   // 字符串长度验证
-  if (['text', 'string'].includes(param.dataType)) {
+  if (param.dataType !== undefined && ['text', 'string'].includes(param.dataType)) {
     if (param.maxLength) {
       rules.push({
         max: param.maxLength,
@@ -133,7 +205,7 @@ async function callDeviceService() {
 
     const result = await callDeviceServiceApi(
       props.deviceDetail.deviceKey,
-      activeService.value.identifier,
+      activeService.value!.identifier,
       serviceForm.value,
     )
 
@@ -159,7 +231,7 @@ async function callDeviceService() {
 }
 
 // 渲染表单项
-function renderFormItem(param) {
+function renderFormItem(param: ServiceParam): 'enum' | 'switch' | 'number' | 'date' | 'textarea' | 'input' {
   // 如果有枚举值，使用下拉选择
   if (param.enums && param.enums.length > 0) {
     return 'enum'
@@ -347,18 +419,20 @@ function renderFormItem(param) {
             <!-- 布尔类型 -->
             <el-switch
               v-if="renderFormItem(param) === 'switch'"
-              v-model="serviceForm[param.identifier]"
+              :model-value="getSwitchValue(param.identifier)"
               :active-text="param.trueText || t('device.on')"
               :inactive-text="param.falseText || t('device.off')"
+              @update:model-value="value => serviceForm[param.identifier] = value"
             />
 
             <!-- 枚举类型 -->
             <el-select
               v-else-if="renderFormItem(param) === 'enum'"
-              v-model="serviceForm[param.identifier]"
+              :model-value="getTextValue(param.identifier)"
               :placeholder="t('common.placeholder_select', { field: param.name })"
               style="width: 100%"
               clearable
+              @update:model-value="value => serviceForm[param.identifier] = value"
             >
               <el-option
                 v-for="item in param.enums"
@@ -383,30 +457,33 @@ function renderFormItem(param) {
             <!-- 日期类型 -->
             <el-date-picker
               v-else-if="renderFormItem(param) === 'date'"
-              v-model="serviceForm[param.identifier]"
+              :model-value="getDateValue(param.identifier)"
               type="datetime"
               :placeholder="t('common.placeholder_select', { field: param.name })"
               style="width: 100%"
+              @update:model-value="value => serviceForm[param.identifier] = value"
             />
 
             <!-- 文本域 -->
             <el-input
               v-else-if="renderFormItem(param) === 'textarea'"
-              v-model="serviceForm[param.identifier]"
+              :model-value="getTextValue(param.identifier)"
               type="textarea"
               :rows="3"
               :maxlength="param.maxLength"
               :placeholder="t('common.placeholder_input', { field: param.name })"
               show-word-limit
+              @update:model-value="value => serviceForm[param.identifier] = value"
             />
 
             <!-- 普通输入框 -->
             <el-input
               v-else
-              v-model="serviceForm[param.identifier]"
+              :model-value="getTextValue(param.identifier)"
               :maxlength="param.maxLength"
               :placeholder="t('common.placeholder_input', { field: param.name })"
               clearable
+              @update:model-value="value => serviceForm[param.identifier] = value"
             />
 
             <div v-if="param.description" class="form-item-hint">

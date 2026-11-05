@@ -1,17 +1,35 @@
-<script lang="jsx" setup>
+<script setup lang="ts">
+import type { Product, ProductType } from '@/types/api'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { productDetailApi, productTypeDetailApi } from '@/api/index.js'
+import { productDetailApi, productTypeDetailApi } from '@/api/index'
 
-const props = defineProps(['typeId', 'productId'])
+/**
+ * 产品详情。
+ *
+ * 后端实体 Product 的描述字段是 remark，页面上展示的是历史遗留的 mark，
+ * 这里补一个可选字段保持模板原样（运行时取到 undefined）。
+ */
+interface ProductDetail extends Product {
+  mark?: string
+}
+
+interface Props {
+  /** 产品类型 ID */
+  typeId: number
+  /** 产品 ID（标准物模型下为空） */
+  productId?: number
+}
+
+const props = defineProps<Props>()
 const { t } = useI18n()
-const product = ref({})
-const productType = ref({})
+const product = ref<Partial<ProductDetail>>({})
+const productType = ref<Partial<ProductType>>({})
 if (props.productId) {
   productDetailApi(props.productId)
     .then(({ data }) => {
       product.value = data
-      productType.value = data.productType
+      productType.value = data.productType as ProductType
     })
 }
 else {

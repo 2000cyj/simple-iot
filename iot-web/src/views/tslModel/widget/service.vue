@@ -1,4 +1,7 @@
-<script lang="jsx" setup>
+<script setup lang="ts">
+import type { VNode } from 'vue'
+import type { TableParams } from '@/composables/useTable'
+import type { ModelProperty, ModelService } from '@/types/api'
 import { Delete, Edit, RefreshRight } from '@element-plus/icons-vue'
 import { ElButton, ElMessage, ElMessageBox } from 'element-plus'
 import { h, ref } from 'vue'
@@ -8,20 +11,49 @@ import {
   propertyListApi,
   serviceDeleteApi,
   standardServiceListApi,
-} from '@/api/index.js'
+} from '@/api/index'
 import IotTable from '@/components/IotTable.vue'
-import { useTable } from '@/composables/useTable.js'
+import { useTable } from '@/composables/useTable'
 import ParamShow from '@/views/tslModel/widget/paramShow.vue' // Import icon display
 import ServiceEdite from '@/views/tslModel/widget/serviceEdite.vue'
 
-const props = defineProps(['typeId', 'productId', 'showEdite'])
-const { t } = useI18n()
-const propertiesDct = ref([])
-const dialogVisibleParams = ref(false)
-const showDetailRow = ref()
-const iotTableRef = ref()
+interface Props {
+  /** 产品类型 ID */
+  typeId: number
+  /** 产品 ID（标准物模型下为空） */
+  productId?: number
+  /** 是否展示编辑操作（模板里存在静态写法 show-edite="true"，故也接受字符串） */
+  showEdite?: boolean | string
+}
 
-function handleShowParams(row) {
+/** 服务表格列配置 */
+interface ServiceColumn {
+  prop?: string
+  label?: string
+  width?: number
+  slot?: string
+  formatter?: (row: ModelService) => string
+  render?: (scope: { row: ModelService }) => VNode
+}
+
+/** 查询参数：useTable 的通用参数 + 服务搜索关键字 */
+interface ServiceParams extends TableParams {
+  search?: string
+}
+
+/** IotTable 组件实例（这里只需要 refresh 方法） */
+interface TableInstance {
+  refresh: () => Promise<void>
+}
+
+const props = defineProps<Props>()
+const { t } = useI18n()
+const propertiesDct = ref<ModelProperty[]>([])
+const dialogVisibleParams = ref(false)
+const showDetailRow = ref<ModelService>()
+const iotTableRef = ref<TableInstance>()
+
+function handleShowParams(row: ModelService) {
   showDetailRow.value = row
   dialogVisibleParams.value = true
 }
@@ -32,14 +64,15 @@ function refreshTable() {
 }
 
 // 自定义删除方法
-async function handleDelete(row) {
+async function handleDelete(row: unknown) {
+  const service = row as ModelService
   try {
     await ElMessageBox.confirm(t('tsl.you_sure_you_want_delete_this_service'), t('common.tip'), {
       confirmButtonText: t('common.confirm'),
       cancelButtonText: t('common.cancel'),
       type: 'warning',
     })
-    await serviceDeleteApi(row.id)
+    await serviceDeleteApi(service.id)
     ElMessage.success(t('tsl.delete_success'))
     refreshTable()
   }
@@ -50,7 +83,7 @@ async function handleDelete(row) {
   }
 }
 
-const column = [
+const column: ServiceColumn[] = [
   {
     prop: 'id',
     label: t('tsl.service_id'),
@@ -67,30 +100,24 @@ const column = [
   {
     prop: 'serviceType',
     label: t('tsl.service_type'),
-    formatter(row) {
-      return row.serviceType === 1 ? t('device.service') : t('tsl.event')
-    },
+    formatter: (row: ModelService) => row.serviceType === 1 ? t('device.service') : t('tsl.event'),
   },
   {
     label: t('tsl.parameter_list_2'),
-    render({ row }) {
-      return h(
-        ElButton,
-        {
-          type: 'primary',
-          link: true,
-          onClick: () => handleShowParams(row),
-        },
-        () => t('tsl.view_parameters'),
-      )
-    },
+    render: ({ row }: { row: ModelService }) => h(
+      ElButton,
+      {
+        type: 'primary',
+        link: true,
+        onClick: () => handleShowParams(row),
+      },
+      () => t('tsl.view_parameters'),
+    ),
   },
   {
     prop: 'required',
     label: t('tsl.required_2'),
-    formatter(row) {
-      return row.required === true ? t('tsl.required') : t('tsl.param_optional_text')
-    },
+    formatter: (row: ModelService) => row.required === true ? t('tsl.required') : t('tsl.param_optional_text'),
   },
   {
     prop: 'cz',
@@ -100,21 +127,27 @@ const column = [
   },
 ]
 const {
-  params,
+  params: tableParams,
   dialogVisible,
   onSearch,
   onReset,
-  onEdit,
+  onEdit: editRow,
   onAdd,
   diaTitle,
   currentItem,
-} = useTable({
+} = useTable<ModelService>({
   diaName: t('device.service'),
   defParams: {
     productTypeId: props.typeId,
     productId: props.productId,
   },
 })
+const params = tableParams as ServiceParams
+
+/** 表格行在模板插槽里是动态类型，这里统一做一次收窄后交给 useTable */
+function onEdit(row: unknown) {
+  editRow(row as ModelService)
+}
 
 function loadPropertiesDict() {
   propertyListApi({

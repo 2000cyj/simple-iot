@@ -1,17 +1,18 @@
-<script setup>
-defineProps({
-  title: {
-    type: String,
-    required: true,
-  },
-  subtitle: {
-    type: String,
-    default: '',
-  },
-  icon: {
-    type: [Object, Function],
-    default: null,
-  },
+<script setup lang="ts">
+import type { Component } from 'vue'
+
+interface Props {
+  /** 页面主标题 */
+  title: string
+  /** 副标题 */
+  subtitle?: string
+  /** 标题前的图标组件 */
+  icon?: Component | null
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  subtitle: '',
+  icon: null,
 })
 </script>
 
@@ -21,13 +22,13 @@ defineProps({
       <div class="iot-page-header__main">
         <div class="iot-page-header__title-area">
           <h1 class="iot-page-header__title">
-            <el-icon v-if="icon" :size="28" class="iot-page-header__icon">
-              <component :is="icon" />
+            <el-icon v-if="props.icon" :size="28" class="iot-page-header__icon">
+              <component :is="props.icon" />
             </el-icon>
-            {{ title }}
+            {{ props.title }}
           </h1>
-          <p v-if="subtitle" class="iot-page-header__subtitle">
-            {{ subtitle }}
+          <p v-if="props.subtitle" class="iot-page-header__subtitle">
+            {{ props.subtitle }}
           </p>
         </div>
         <div v-if="$slots.actions" class="iot-page-header__actions">
@@ -47,12 +48,12 @@ defineProps({
     background: var(--iot-color-bg-card);
     backdrop-filter: blur(20px);
     border: 1px solid var(--iot-glass-border);
-    border-radius: var(--radius-lg);
-    padding: var(--space-xl) var(--space-2xl);
-    box-shadow: var(--shadow-md);
+    border-radius: var(--iot-radius-lg);
+    padding: var(--iot-space-xl) var(--iot-space-2xl);
+    box-shadow: var(--iot-shadow-md);
     position: relative;
     overflow: hidden;
-    transition: all var(--transition-base);
+    transition: all var(--iot-transition-base);
 
     &::before {
       content: '';
@@ -69,7 +70,7 @@ defineProps({
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: var(--space-lg);
+    gap: var(--iot-space-lg);
     flex-wrap: wrap;
   }
 
@@ -84,7 +85,7 @@ defineProps({
     margin: 0;
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--iot-space-sm);
     color: var(--iot-color-text-primary);
   }
 
@@ -93,7 +94,7 @@ defineProps({
   }
 
   &__subtitle {
-    margin: var(--space-sm) 0 0 0;
+    margin: var(--iot-space-sm) 0 0 0;
     font-size: 14px;
     color: var(--iot-color-text-secondary);
   }
@@ -101,12 +102,12 @@ defineProps({
   &__actions {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--iot-space-sm);
     flex-shrink: 0;
   }
 
   &__extra {
-    margin-top: var(--space-lg);
+    margin-top: var(--iot-space-lg);
   }
 }
 </style>

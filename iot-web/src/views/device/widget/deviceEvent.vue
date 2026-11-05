@@ -1,23 +1,39 @@
-<script setup>
+<script setup lang="ts">
+import type { Device, DeviceEventData } from '@/types/api'
 import { RefreshRight } from '@element-plus/icons-vue'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { deviceEventLogsApi } from '@/api/index.js'
+import { deviceEventLogsApi } from '@/api/index'
 import IotTable from '@/components/IotTable.vue'
-import { useTable } from '@/composables/useTable.js'
-import { DateUtils } from '@/utils/date_utils.js'
+import { useTable } from '@/composables/useTable'
+import { DateUtils } from '@/utils/date_utils'
 
-const props = defineProps({
-  deviceDetail: {
-    type: Object,
-    required: true,
-  },
-})
+interface Props {
+  /** 设备详情 */
+  deviceDetail: Device
+}
+
+/** 事件日志表格的列配置 */
+interface EventColumn {
+  /** 列字段 */
+  prop?: string
+  /** 列标题 */
+  label?: string
+  /** 列宽 */
+  width?: number
+  /** 值格式化 */
+  formatter?: (row: DeviceEventData) => string | undefined
+}
+
+const props = defineProps<Props>()
 
 const { t } = useI18n()
 const tlsEventOpt = computed(() => props.deviceDetail.tslModel?.events || [])
+const tlsEventOptions = computed(() => tlsEventOpt.value.filter(
+  (item): item is typeof item & { identifier: string } => typeof item.identifier === 'string',
+))
 
-const column = computed(() => [
+const column = computed<EventColumn[]>(() => [
   {
     prop: 'eventType',
     label: t('device.event_type'),
@@ -62,9 +78,13 @@ const {
   },
 })
 
-const dateRange = ref([DateUtils.getStartOfDay(), DateUtils.getEndOfDay()])
+const dateRange = ref<Date[]>([DateUtils.getStartOfDay(), DateUtils.getEndOfDay()])
+const identifier = computed<string | undefined>({
+  get: () => typeof params.identifier === 'string' ? params.identifier : undefined,
+  set: value => params.identifier = value,
+})
 
-function handleDateChange(val) {
+function handleDateChange(val: Date[] | null) {
   if (val && val.length === 2) {
     params.beginTime = DateUtils.formatDate(val[0])
     params.endTime = DateUtils.formatDate(val[1])
@@ -84,14 +104,14 @@ function resetFilters() {
       <div class="search-item">
         <span class="search-label">{{ t('device.event_type') }}:</span>
         <el-select
-          v-model="params.identifier"
+          v-model="identifier"
           :placeholder="t('common.placeholder_select', { field: t('device.event_type') })"
           class="search-select"
           filterable
           clearable
         >
           <el-option
-            v-for="item in tlsEventOpt"
+            v-for="item in tlsEventOptions"
             :key="item.identifier"
             :label="item.name"
             :value="item.identifier"

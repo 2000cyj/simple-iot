@@ -1,8 +1,9 @@
-<script setup>
+<script setup lang="ts">
+import type { Locale } from '@/locales'
 import { ElMessage } from 'element-plus'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { setLocale } from '@/locales'
+import { LOCALES, setLocale } from '@/locales'
 
 const { t, locale } = useI18n()
 
@@ -12,10 +13,22 @@ const currentLocaleLabel = computed(() => {
   return currentLocale.value === 'zh-CN' ? t('locale.zh_cn') : t('locale.en_us')
 })
 
-function handleCommand(command) {
-  setLocale(command)
+/**
+ * el-dropdown 的 @command 载荷类型为 string | number | object，
+ * 这里收窄为受支持的 Locale，避免把非法值写入 i18n。
+ */
+function toLocale(command: string | number | object): Locale | undefined {
+  return LOCALES.find(locale => locale === command)
+}
+
+function handleCommand(command: string | number | object) {
+  const nextLocale = toLocale(command)
+  if (!nextLocale)
+    return
+
+  setLocale(nextLocale)
   ElMessage.success({
-    message: command === 'zh-CN' ? t('locale.switched_zh') : t('locale.switched_en'),
+    message: nextLocale === 'zh-CN' ? t('locale.switched_zh') : t('locale.switched_en'),
     duration: 1500,
   })
   // 刷新页面以应用新语言（Element Plus 需要重新初始化）

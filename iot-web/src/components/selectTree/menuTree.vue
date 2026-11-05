@@ -1,11 +1,25 @@
-<script lang="jsx" setup>
+<script setup lang="ts">
 import { useRouter } from 'vue-router'
 
-defineProps(['data', 'actPath'])
+interface MenuTreeItem {
+  id: string | number
+  permissionUrl: string
+  permissionName: string
+  icon?: string
+  showChild?: boolean
+  children: MenuTreeItem[]
+}
+
+interface Props {
+  data: MenuTreeItem[]
+  actPath?: string
+}
+
+defineProps<Props>()
 
 const router = useRouter()
 
-function checkChild(item) {
+function checkChild(item: MenuTreeItem): void {
   if (item.children.length) {
     item.showChild = !item.showChild
   }

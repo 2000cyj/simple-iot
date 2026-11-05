@@ -1,15 +1,24 @@
-<script lang="jsx" setup>
+<script setup lang="ts">
+import type { ModelProperty, ModelService } from '@/types/api'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IotTable from '@/components/IotTable.vue'
 
-const props = defineProps(['datas', 'properties'])
+interface Props {
+  /** 服务数据（入参 / 出参 ID 从这里取） */
+  datas?: ModelService | null
+  /** 可选属性列表 */
+  properties: ModelProperty[]
+}
+
+const props = defineProps<Props>()
 const { t } = useI18n()
-const inputParam = ref([])
-const outPutParam = ref([])
-function findItem(id) {
-  return props.properties
-    .find(item => item.id === id)
+const inputParam = ref<ModelProperty[]>([])
+const outPutParam = ref<ModelProperty[]>([])
+function findItem(id: number) {
+  // 运行时可能查不到（属性已被删除），这里只在类型层面收窄，
+  // 表格里仍然会拿到 undefined 行，行为与改造前一致。
+  return props.properties.find(item => item.id === id) as ModelProperty
 }
 inputParam.value = props.datas?.inputParamIds?.map(id => findItem(id)) || []
 outPutParam.value = props.datas?.outputParamIds?.map(id => findItem(id)) || []

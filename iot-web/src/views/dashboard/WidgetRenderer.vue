@@ -1,14 +1,20 @@
-<script setup>
+<script setup lang="ts">
+import type { AlarmPage, AlarmSeverity, Device } from '@/types/api'
 import dayjs from 'dayjs'
-import { BarChart, GaugeChart, LineChart } from 'echarts/charts'
+import { BarChart, type BarSeriesOption, GaugeChart, type GaugeSeriesOption, LineChart, type LineSeriesOption } from 'echarts/charts'
 import {
   DataZoomComponent,
+  type DataZoomComponentOption,
   GridComponent,
+  type GridComponentOption,
   LegendComponent,
+  type LegendComponentOption,
   TitleComponent,
+  type TitleComponentOption,
   TooltipComponent,
+  type TooltipComponentOption,
 } from 'echarts/components'
-import { use } from 'echarts/core'
+import { type ComposeOption, use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 /**
  * WidgetRenderer - 单个仪表盘组件渲染器
@@ -17,36 +23,140 @@ import { CanvasRenderer } from 'echarts/renderers'
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import VChart from 'vue-echarts'
-import { fetchAlarmPage, fetchLatestData, fetchMetric, fetchDeviceList } from '@/api/dashboard'
-import { useAccountStore } from '@/store/modules/account'
+import { fetchAlarmPage, fetchDeviceList, fetchLatestData, fetchMetric } from '@/api/dashboard'
 import IotTable from '@/components/IotTable.vue'
-import { normalizePage } from '@/utils/page.js'
+import { useAccountStore } from '@/store/modules/account'
+import { normalizePage } from '@/utils/page'
+
+/**
+ * 仪表盘组件（widget）的类型契约。
+ *
+ * 后端 `Dashboard.layout` 的元素是「布局项 + 组件配置」的混合结构，
+ * 而后端实体只声明为 `Array<Record<string, unknown>>`（见 @/types/api），
+ * 这里在前端补一份精确结构。DashboardEditor / DashboardList 各自持有一份等价定义。
+ */
+
+/** 支持的组件类型 */
+type WidgetType =
+  | 'line-chart'
+  | 'gauge'
+  | 'value-card'
+  | 'data-table'
+  | 'bar-chart'
+  | 'device-grid'
+  | 'alarm-list'
+
+/** 组件配置 */
+interface WidgetConfig {
+  /** 组件类型 */
+  type?: WidgetType
+  /** 组件标题（配置面板里可覆盖） */
+  title?: string
+  /** 关联产品 ID */
+  productId?: number | null
+  /** 设备 Key */
+  deviceKey?: string
+  /** 属性标识符 */
+  identifier?: string
+  /** 时间范围（小时） */
+  timeRange?: number
+  /** 单位 */
+  unit?: string
+  /** 仪表盘最小值 */
+  min?: number
+  /** 仪表盘最大值 */
+  max?: number
+  /** 告警级别过滤 */
+  severity?: AlarmSeverity
+}
+
+/** 仪表盘组件（同时也是 vue-grid-layout 的布局项） */
+interface DashboardWidget {
+  /** vue-grid-layout 的布局项 ID */
+  i: string
+  x: number
+  y: number
+  w: number
+  h: number
+  /** 组件标题 */
+  title?: string
+  /** 组件类型（与 config.type 二选一，config 优先） */
+  type?: WidgetType
+  /** 组件配置（编辑器创建的组件必带 config） */
+  config: WidgetConfig
+}
+
+/** 遥测曲线上的一个采样点 */
+interface MetricDataPoint {
+  /** 采样时间 */
+  time?: string
+  /** 采样值 */
+  value: number | string
+}
+
+/** websocket 推送报文 */
+interface WsMessage {
+  /** 频道：telemetry / alarm */
+  channel?: string
+  /** 遥测数据 */
+  data?: {
+    deviceKey?: string
+    value?: unknown
+  }
+}
+
+/** 表格列的自定义渲染上下文 */
+interface ColumnRenderContext<TRow> {
+  row: TRow
+  column?: Record<string, unknown>
+  $index?: number
+}
+
+/**
+ * 告警列表行：后端 AlarmPageVo 的时间字段是 createdTime，
+ * 但历史代码读的是 createTime（后端并不返回该字段，恒为 undefined）。
+ * 为保持运行时行为不变，这里在类型上同时保留两者。
+ */
+type AlarmListRow = AlarmPage & { createTime?: string }
+
+/** 本组件用到的 echarts 配置（只注册了折线 / 柱状 / 仪表盘与少量组件） */
+type WidgetChartOption = ComposeOption<
+  LineSeriesOption | GaugeSeriesOption | BarSeriesOption
+  | GridComponentOption | TooltipComponentOption | LegendComponentOption
+  | TitleComponentOption | DataZoomComponentOption
+>
+
+const props = defineProps<{
+  widget: DashboardWidget
+}>()
 
 // ponytail: single WS connection shared by all widgets on the page.
 // In-memory ref, no reconnect logic. If WS fails, 30s polling still runs.
-let ws = null
-let wsListener = null
-function getWs() {
-  if (ws) return ws
+let ws: WebSocket | null = null
+function getWs(): WebSocket | null {
+  if (ws)
+    return ws
   const token = useAccountStore().authorization?.tokenValue
-  if (!token) return null
+  if (!token)
+    return null
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
   ws = new WebSocket(`${proto}://${location.host}/iot/ws/iot?token=${token}`)
   return ws
 }
-function onWsMessage(cb) {
+function onWsMessage(cb: (msg: WsMessage) => void): () => void {
   const conn = getWs()
-  if (!conn) return () => {}
-  wsListener = (ev) => {
-    try { const msg = JSON.parse(ev.data); cb(msg) } catch {}
+  if (!conn)
+    return () => {}
+  const wsListener = (ev: MessageEvent): void => {
+    try {
+      const msg = JSON.parse(ev.data) as WsMessage
+      cb(msg)
+    }
+    catch {}
   }
   conn.addEventListener('message', wsListener)
   return () => conn.removeEventListener('message', wsListener)
 }
-
-const props = defineProps({
-  widget: { type: Object, required: true },
-})
 
 use([
   CanvasRenderer,
@@ -61,17 +171,17 @@ use([
 ])
 
 const loading = ref(false)
-const chartData = ref([])
-const latestValue = ref(null)
-const latestTime = ref(null)
-const gridDevices = ref([])
-const alarmList = ref([])
-let timer = null
-let offWs = null
+const chartData = ref<MetricDataPoint[]>([])
+const latestValue = ref<number | string | null>(null)
+const latestTime = ref<string | null>(null)
+const gridDevices = ref<Device[]>([])
+const alarmList = ref<AlarmListRow[]>([])
+let timer: ReturnType<typeof setInterval> | null = null
+let offWs: (() => void) | null = null
 
-const widgetType = computed(() => props.widget?.config?.type || props.widget?.type)
-const widgetConfig = computed(() => props.widget?.config || {})
-const title = computed(() => props.widget?.title || widgetConfig.value?.title || '')
+const widgetType = computed<WidgetType | undefined>(() => props.widget?.config?.type || props.widget?.type)
+const widgetConfig = computed<WidgetConfig>(() => props.widget?.config || {})
+const title = computed<string>(() => props.widget?.title || widgetConfig.value?.title || '')
 
 async function loadData() {
   const cfg = widgetConfig.value
@@ -79,16 +189,22 @@ async function loadData() {
   loading.value = true
   try {
     if (type === 'value-card') {
-      const res = await fetchLatestData(cfg.deviceKey)
+      const res = await fetchLatestData(cfg.deviceKey as string)
       const items = res?.data || []
       const found = items.find(i => i.key === cfg.identifier)
       if (found) {
-        latestValue.value = found.value
+        latestValue.value = found.value as number | string
         latestTime.value = dayjs().format('HH:mm:ss')
       }
     }
     else if (type === 'device-grid') {
-      const res = await fetchDeviceList({ productId: cfg.productId, page: 1, size: 200 })
+      // 后端 GET /device/list 不分页，page / size 为历史遗留参数
+      const listParams = {
+        productId: cfg.productId ?? undefined,
+        page: 1,
+        size: 200,
+      }
+      const res = await fetchDeviceList(listParams)
       gridDevices.value = normalizePage(res).records
     }
     else if (type === 'alarm-list') {
@@ -98,12 +214,14 @@ async function loadData() {
     else {
       const now = dayjs()
       const res = await fetchMetric({
-        deviceKey: cfg.deviceKey,
-        identifier: cfg.identifier,
+        deviceKey: cfg.deviceKey as string,
+        identifier: cfg.identifier as string,
         beginTime: now.subtract(cfg.timeRange || 1, 'hour').format('YYYY-MM-DD HH:mm:ss'),
         endTime: now.format('YYYY-MM-DD HH:mm:ss'),
       })
-      chartData.value = res?.data || []
+      // 后端 /device/data/property/metric 返回 [{ time, value }]，
+      // 但 @/api/dashboard 的类型只声明成 KeyValue<string, unknown>[]，此处按实际结构收敛
+      chartData.value = (res?.data || []) as unknown as MetricDataPoint[]
     }
   }
   catch {
@@ -114,7 +232,7 @@ async function loadData() {
   }
 }
 
-const chartOption = computed(() => {
+const chartOption = computed<WidgetChartOption>(() => {
   const cfg = widgetConfig.value
   const type = widgetType.value
 
@@ -152,7 +270,7 @@ const chartOption = computed(() => {
         axisLine: { lineStyle: { width: 12 } },
         detail: { valueAnimation: true, formatter: '{value}', fontSize: 24, offsetCenter: [0, '70%'] },
         title: { offsetCenter: [0, '90%'], fontSize: 12 },
-        data: [{ value: val, name: cfg.identifier || title.value }],
+        data: [{ value: val as number, name: cfg.identifier || title.value }],
       }],
     }
   }
@@ -188,26 +306,35 @@ onMounted(() => {
     if (msg.channel === 'telemetry' && widgetType.value === 'value-card') {
       const d = msg.data
       if (d && (!widgetConfig.value.deviceKey || d.deviceKey === widgetConfig.value.deviceKey)) {
-        latestValue.value = d.value
+        latestValue.value = d.value as number | string
         latestTime.value = dayjs().format('HH:mm:ss')
       }
-    } else if (msg.channel === 'alarm' && widgetType.value === 'alarm-list') {
+    }
+    else if (msg.channel === 'alarm' && widgetType.value === 'alarm-list') {
       loadData() // refresh alarm list
-    } else if (msg.channel === 'telemetry' && widgetType.value === 'device-grid') {
+    }
+    else if (msg.channel === 'telemetry' && widgetType.value === 'device-grid') {
       loadData() // refresh grid
     }
   })
 })
 
 onUnmounted(() => {
-  if (timer) clearInterval(timer)
-  if (offWs) offWs()
+  if (timer)
+    clearInterval(timer)
+  if (offWs)
+    offWs()
 })
 
 watch(() => props.widget, loadData, { deep: true })
 
 const dataTableColumns = computed(() => [
-  { prop: 'time', label: '时间', width: 120, render: ({ row }) => row.time ? dayjs(row.time).format('HH:mm:ss') : '' },
+  {
+    prop: 'time',
+    label: '时间',
+    width: 120,
+    render: ({ row }: ColumnRenderContext<MetricDataPoint>) => row.time ? dayjs(row.time).format('HH:mm:ss') : '',
+  },
   { prop: 'value', label: '值' },
 ])
 
@@ -215,7 +342,12 @@ const alarmColumns = computed(() => [
   { prop: 'alarmType', label: '类型', width: 100 },
   { prop: 'severity', label: '级别', width: 80, slot: 'severity' },
   { prop: 'deviceName', label: '设备', showOverflowTooltip: true },
-  { prop: 'createTime', label: '时间', width: 140, render: ({ row }) => row.createTime ? dayjs(row.createTime).format('MM-DD HH:mm') : '' },
+  {
+    prop: 'createTime',
+    label: '时间',
+    width: 140,
+    render: ({ row }: ColumnRenderContext<AlarmListRow>) => row.createTime ? dayjs(row.createTime).format('MM-DD HH:mm') : '',
+  },
 ])
 </script>
 
@@ -261,24 +393,34 @@ const alarmColumns = computed(() => [
 
     <!-- 未知类型 -->
     <div v-else-if="widgetType === 'device-grid'" class="device-grid-widget">
-      <div class="dgw-title">{{ title }}</div>
+      <div class="dgw-title">
+        {{ title }}
+      </div>
       <div class="dgw-grid">
         <div v-for="d in gridDevices" :key="d.id" class="dgw-cell" :class="{ online: d.online, offline: !d.online }">
           <span class="dgw-dot" />
           <span class="dgw-name">{{ d.deviceName }}</span>
         </div>
       </div>
-      <div v-if="gridDevices.length === 0" class="dgw-empty">暂无设备</div>
+      <div v-if="gridDevices.length === 0" class="dgw-empty">
+        暂无设备
+      </div>
     </div>
 
     <div v-else-if="widgetType === 'alarm-list'" class="alarm-list-widget">
-      <div class="alw-title">{{ title }}</div>
+      <div class="alw-title">
+        {{ title }}
+      </div>
       <IotTable :columns="alarmColumns" :data="alarmList" :is-page="false" density="compact">
         <template #severity="{ row }">
-          <el-tag :type="row.severity === 'CRITICAL' ? 'danger' : row.severity === 'MAJOR' ? 'warning' : 'info'" size="small">{{ row.severity }}</el-tag>
+          <el-tag :type="row.severity === 'CRITICAL' ? 'danger' : row.severity === 'MAJOR' ? 'warning' : 'info'" size="small">
+            {{ row.severity }}
+          </el-tag>
         </template>
       </IotTable>
-      <div v-if="alarmList.length === 0" class="alw-empty">暂无告警</div>
+      <div v-if="alarmList.length === 0" class="alw-empty">
+        暂无告警
+      </div>
     </div>
 
     <div v-else class="widget-unknown">
@@ -356,13 +498,43 @@ const alarmColumns = computed(() => [
   padding: 4px;
   overflow: hidden;
 
-  .dgw-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-  .dgw-grid { display: flex; flex-wrap: wrap; gap: 4px; overflow-y: auto; }
-  .dgw-cell { display: flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; font-size: 11px; background: #f0f0f0; }
-  .dgw-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .dgw-cell.online .dgw-dot { background: #22c55e; }
-  .dgw-cell.offline .dgw-dot { background: #ef4444; }
-  .dgw-empty { text-align: center; color: #999; padding: 20px; font-size: 12px; }
+  .dgw-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .dgw-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    overflow-y: auto;
+  }
+  .dgw-cell {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    background: #f0f0f0;
+  }
+  .dgw-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .dgw-cell.online .dgw-dot {
+    background: #22c55e;
+  }
+  .dgw-cell.offline .dgw-dot {
+    background: #ef4444;
+  }
+  .dgw-empty {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+    font-size: 12px;
+  }
 }
 
 .alarm-list-widget {
@@ -372,7 +544,16 @@ const alarmColumns = computed(() => [
   padding: 4px;
   overflow: hidden;
 
-  .alw-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-  .alw-empty { text-align: center; color: #999; padding: 20px; font-size: 12px; }
+  .alw-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .alw-empty {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+    font-size: 12px;
+  }
 }
 </style>

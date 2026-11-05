@@ -1,4 +1,7 @@
-<script setup>
+<script setup lang="ts">
+import type { Component } from 'vue'
+import type { DashboardStatistics } from '@/api/dashboard'
+import type { AlarmPage, AlarmSeverity, DevicePage } from '@/types/api'
 import {
   Bell,
   Box,
@@ -16,14 +19,56 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { getDashboardStatistics } from '@/api/dashboard'
-import { alarmPageApi, alarmStatisticsApi, devicePageApi } from '@/api/index.js'
+import { alarmPageApi, alarmStatisticsApi, devicePageApi } from '@/api/index'
 import AlarmDetailDialog from '@/components/AlarmDetailDialog.vue'
-import { normalizePage } from '@/utils/page.js'
+import { normalizePage } from '@/utils/page'
+
+/** 首页概览卡片用到的统计字段（后端 DashboardStatistics 的子集） */
+type HomeStats = Pick<
+  DashboardStatistics,
+  'total' | 'online' | 'offline' | 'todayAdd' | 'cpuUsage' | 'memoryUsage' | 'diskUsage'
+>
+
+/** 告警级别（用于首页告警条目的配色） */
+type AlarmLevel = 'danger' | 'warning'
+
+/** element-plus 标签类型 */
+type TagType = 'primary' | 'success' | 'info' | 'warning' | 'danger'
+
+/** 首页告警条目：在后端告警字段的基础上补了展示用的派生字段 */
+interface HomeAlert extends AlarmPage {
+  /** 设备展示名 */
+  device: string
+  /** 告警消息（已做兜底） */
+  message: string
+  /** 告警级别（用于样式） */
+  level: AlarmLevel
+  /** 相对时间文案 */
+  time: string
+}
+
+/** 首页概览卡片 */
+interface OverviewCard {
+  key: string
+  label: string
+  value: number
+  icon: Component
+  color: string
+  trend: string | null
+}
+
+/** 首页快捷入口 */
+interface QuickLink {
+  name: string
+  icon: Component
+  path: string
+  color: string
+}
 
 const router = useRouter()
 const { t, locale } = useI18n()
 
-const stats = ref({
+const stats = ref<HomeStats>({
   total: 0,
   online: 0,
   offline: 0,
@@ -34,11 +79,11 @@ const stats = ref({
 })
 
 // 最近设备
-const recentDevices = ref([])
+const recentDevices = ref<DevicePage[]>([])
 const devicesLoading = ref(false)
 
 // 告警数据
-const alerts = ref([])
+const alerts = ref<HomeAlert[]>([])
 const alertsLoading = ref(false)
 const alertStats = ref({
   activeCount: 0,
@@ -46,7 +91,7 @@ const alertStats = ref({
 
 // 告警详情弹窗
 const detailVisible = ref(false)
-const currentAlarm = ref(null)
+const currentAlarm = ref<AlarmPage | null>(null)
 
 // 计算在线率
 const onlineRate = computed(() => {
@@ -56,7 +101,7 @@ const onlineRate = computed(() => {
 })
 
 // 概览卡片数据
-const overviewCards = computed(() => [
+const overviewCards = computed<OverviewCard[]>(() => [
   {
     key: 'total',
     label: t('home.device_total'),
@@ -92,7 +137,7 @@ const overviewCards = computed(() => [
 ])
 
 // 快捷入口
-const quickLinks = computed(() => [
+const quickLinks = computed<QuickLink[]>(() => [
   { name: t('menu.device'), icon: Monitor, path: '/device', color: 'var(--iot-color-primary)' },
   { name: t('menu.product'), icon: Box, path: '/product', color: 'var(--iot-color-secondary)' },
   { name: t('menu.protocol'), icon: Connection, path: '/protocol', color: 'var(--iot-color-success)' },
@@ -102,7 +147,7 @@ const quickLinks = computed(() => [
 ])
 
 // 跳转页面
-function navigateTo(path) {
+function navigateTo(path: string) {
   router.push(path)
 }
 
@@ -161,18 +206,19 @@ async function loadAlertStats() {
 }
 
 // 根据严重程度获取告警级别
-function getAlarmLevel(severity) {
-  const map = {
+function getAlarmLevel(severity?: AlarmSeverity): AlarmLevel {
+  const map: Record<AlarmSeverity, AlarmLevel> = {
     CRITICAL: 'danger',
     MAJOR: 'danger',
     MINOR: 'warning',
     WARNING: 'warning',
   }
-  return map[severity] || 'warning'
+  // 后端理论上只会返回枚举内的值，但历史数据可能越界，这里统一兜底
+  return (severity && map[severity]) || 'warning'
 }
 
 // 格式化相对时间
-function formatRelativeTime(timeStr) {
+function formatRelativeTime(timeStr?: string): string {
   if (!timeStr)
     return ''
   const date = new Date(timeStr)
@@ -180,7 +226,7 @@ function formatRelativeTime(timeStr) {
     return timeStr
 
   const now = new Date()
-  const diff = now - date
+  const diff = now.getTime() - date.getTime()
   const minutes = Math.floor(diff / 60000)
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
@@ -203,7 +249,7 @@ function formatRelativeTime(timeStr) {
 }
 
 // 查看告警详情
-function handleAlarmDetail(alert) {
+function handleAlarmDetail(alert: HomeAlert) {
   currentAlarm.value = alert
   detailVisible.value = true
 }
@@ -215,12 +261,12 @@ function refreshAlerts() {
 }
 
 // 获取设备状态标签类型
-function getDeviceStatusType(online) {
+function getDeviceStatusType(online?: boolean): TagType {
   return online ? 'success' : 'danger'
 }
 
 // 获取设备状态文字
-function getDeviceStatusText(online) {
+function getDeviceStatusText(online?: boolean): string {
   return online ? t('device.online') : t('device.offline')
 }
 
@@ -418,7 +464,7 @@ onMounted(() => {
     <!-- 告警详情弹窗 -->
     <AlarmDetailDialog
       v-model="detailVisible"
-      :alarm="currentAlarm"
+      :alarm="currentAlarm ?? undefined"
       @refresh="refreshAlerts"
     />
   </div>

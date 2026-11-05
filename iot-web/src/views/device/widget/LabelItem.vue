@@ -1,13 +1,14 @@
-<script setup>
-defineProps({
-  label: {
-    type: String,
-    default: '',
-  },
-  value: {
-    type: [String, Number],
-    default: '',
-  },
+<script setup lang="ts">
+interface Props {
+  /** 标签名 */
+  label?: string
+  /** 展示值 */
+  value?: string | number
+}
+
+withDefaults(defineProps<Props>(), {
+  label: '',
+  value: '',
 })
 </script>
 

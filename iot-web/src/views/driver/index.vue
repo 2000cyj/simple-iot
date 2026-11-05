@@ -39,6 +39,27 @@ interface TableColumn<TRow> {
   render?: (scope: { row: TRow }) => unknown
 }
 
+interface DriverTypeOption {
+  code: DriverTypeEnum
+  desc: string
+}
+
+interface ConnectionTypeOption {
+  code: ConnectionTypeEnum
+  desc: string
+}
+
+function isDriverTypeOption(item: DictEnumItem): item is DictEnumItem & DriverTypeOption {
+  return typeof item.code === 'string'
+    && ['MQTT', 'TCP', 'UDP', 'HTTP', 'OPCUA', 'CUSTOM'].includes(item.code)
+    && typeof item.desc === 'string'
+}
+
+function isConnectionTypeOption(item: DictEnumItem): item is DictEnumItem & ConnectionTypeOption {
+  return (item.code === 'DEFAULT' || item.code === 'CUSTOM')
+    && typeof item.desc === 'string'
+}
+
 /** 驱动表单模型（新增 / 编辑共用） */
 interface DriverFormModel {
   /** 驱动名称 */
@@ -87,8 +108,8 @@ const formRules = ref<FormRules<DriverFormModel>>({
     { required: true, message: t('driver.select_connection_type'), trigger: 'change' },
   ],
 })
-const driverTypeOptions = ref<DictEnumItem[]>([])
-const connectionTypeOptions = ref<DictEnumItem[]>([])
+const driverTypeOptions = ref<DriverTypeOption[]>([])
+const connectionTypeOptions = ref<ConnectionTypeOption[]>([])
 const formRef = ref<FormInstance | null>(null)
 
 function fetchList() {
@@ -168,10 +189,10 @@ function handleDelete(row: Driver) {
 
 onMounted(() => {
   getDriverTypeEnum().then((res) => {
-    driverTypeOptions.value = res.data
+    driverTypeOptions.value = res.data.filter(isDriverTypeOption)
   })
   getConnectionTypeEnum().then((res) => {
-    connectionTypeOptions.value = res.data
+    connectionTypeOptions.value = res.data.filter(isConnectionTypeOption)
   })
   fetchList()
 })

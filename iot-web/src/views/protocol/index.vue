@@ -1,16 +1,59 @@
-<script setup>
+<script setup lang="ts">
+import type { VNode } from 'vue'
+import type { TableParams } from '@/composables/useTable'
+import type { Protocol, ProtoType } from '@/types/api'
 import { Connection, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, ElTag } from 'element-plus'
 import { h, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { protocolDeleteApi, protocolListApi, protocolSetStatusApi } from '@/api/index.js'
+import { protocolDeleteApi, protocolListApi, protocolSetStatusApi } from '@/api/index'
 import IotTable from '@/components/IotTable.vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { useTable } from '@/composables/useTable.js'
+import { useTable } from '@/composables/useTable'
 import EditDia from '@/views/protocol/widget/editDia.vue'
 
+/** Element Plus 标签色值 */
+type TagType = 'primary' | 'success' | 'info' | 'warning' | 'danger'
+
+/** 协议类型下拉项 */
+interface ProtocolTypeOption {
+  label: string
+  value: ProtoType
+  color: TagType
+}
+
+/** 脚本语言选项 */
+interface ScriptLangOption {
+  label: string
+  icon: string
+}
+
+/** 协议表格列配置 */
+interface ProtocolColumn {
+  prop?: string
+  label?: string
+  width?: number
+  minWidth?: number
+  fixed?: 'left' | 'right'
+  slot?: string
+  showOverflowTooltip?: boolean
+  render?: (scope: { row: Protocol }) => VNode | string
+}
+
+/** 查询参数：useTable 的通用参数 + 协议检索条件 */
+interface ProtocolParams extends TableParams {
+  /** 协议类型 */
+  protoType?: ProtoType
+  /** 脚本语言 */
+  scriptLang?: string
+  /** 协议名称 */
+  name?: string
+  /** 协议 Key */
+  protoKey?: string
+}
+
 const { t } = useI18n()
-const protocolTypeOpt = [
+const protocolTypeOpt: ProtocolTypeOption[] = [
   {
     label: 'JAVA',
     value: 1,
@@ -28,14 +71,14 @@ const protocolTypeOpt = [
   },
 ]
 
-const scriptLangOpt = {
+const scriptLangOpt: Record<string, ScriptLangOption> = {
   javascript: { label: 'JavaScript', icon: '📜' },
   python: { label: 'Python', icon: '🐍' },
   groovy: { label: 'Groovy', icon: '☕' },
   lua: { label: 'Lua', icon: '🌙' },
 }
 
-const column = [
+const column: ProtocolColumn[] = [
   {
     prop: 'name',
     label: t('protocol.protocol_name'),
@@ -46,7 +89,7 @@ const column = [
     prop: 'status',
     label: t('common.status'),
     width: 100,
-    render({ row }) {
+    render: ({ row }: { row: Protocol }) => {
       return h(ElTag, { type: row.status === 1 ? 'success' : 'info' }, () => row.status === 1 ? t('common.enabled') : t('protocol.disabled'))
     },
   },
@@ -54,7 +97,7 @@ const column = [
     prop: 'protoType',
     label: t('protocol.protocol_type_2'),
     width: 120,
-    render({ row }) {
+    render: ({ row }: { row: Protocol }) => {
       const opt = protocolTypeOpt.find(item => item.value === row.protoType)
       return opt ? h(ElTag, { type: opt.color }, () => opt.label) : '-'
     },
@@ -68,10 +111,10 @@ const column = [
     prop: 'scriptLang',
     label: t('protocol.language'),
     width: 120,
-    render({ row }) {
+    render: ({ row }: { row: Protocol }) => {
       if (row.protoType !== 3)
         return '-'
-      const lang = scriptLangOpt[row.scriptLang]
+      const lang = row.scriptLang ? scriptLangOpt[row.scriptLang] : undefined
       return lang ? `${lang.icon} ${lang.label}` : '-'
     },
   },
@@ -91,7 +134,7 @@ const column = [
 ]
 
 const {
-  params,
+  params: tableParams,
   dialogVisible,
   updatePage,
   onSearch,
@@ -99,35 +142,45 @@ const {
   tableData,
   total,
   loading,
-  onDelete,
+  onDelete: deleteRow,
   onAdd,
   diaTitle,
   currentItem,
   onPageChange,
   onSizeChange,
-} = useTable({
-  deleteApi: protocolDeleteApi,
+} = useTable<Protocol>({
+  // useTable 的 deleteApi 声明为 (id: number | string) => Promise<unknown>，
+  // 而后端删除接口只接受数字 id；这里只做类型层面的放宽，运行时的调用方式完全不变。
+  deleteApi: protocolDeleteApi as (id: number | string) => Promise<unknown>,
   fetchApi: protocolListApi,
   diaName: t('product.protocol'),
   defParams: {},
 })
+const params = tableParams as ProtocolParams
 
 function closeEdite() {
   updatePage()
 }
 
-function onEdit(row) {
-  currentItem.value = row
+/** 表格行在模板插槽里是动态类型，这里统一做一次收窄 */
+function onEdit(row: unknown) {
+  currentItem.value = row as Protocol
   dialogVisible.value = true
 }
 
-async function toggleStatus(row) {
-  const newStatus = row.status !== 1
+/** 表格行在模板插槽里是动态类型，这里统一做一次收窄后交给 useTable */
+function onDelete(row: unknown) {
+  void deleteRow(row as Protocol)
+}
+
+async function toggleStatus(row: unknown) {
+  const protocol = row as Protocol
+  const newStatus = protocol.status !== 1
   const action = newStatus ? t('common.enable') : t('protocol.disable')
 
   try {
     await ElMessageBox.confirm(
-      t('protocol.you_sure_you_want_action_protocol_name_tip', { action, name: row.name, tip: newStatus ? t('protocol.after_enabling_protocol_will_be_loaded_into_memory') : t('protocol.after_disabling_protocol_will_be_unloaded_from_memory') }),
+      t('protocol.you_sure_you_want_action_protocol_name_tip', { action, name: protocol.name, tip: newStatus ? t('protocol.after_enabling_protocol_will_be_loaded_into_memory') : t('protocol.after_disabling_protocol_will_be_unloaded_from_memory') }),
       t('protocol.operation_confirmation'),
       {
         confirmButtonText: t('common.confirm'),
@@ -135,13 +188,14 @@ async function toggleStatus(row) {
         type: 'warning',
       },
     )
-    await protocolSetStatusApi(row.id, newStatus)
-    row.status = newStatus ? 1 : 2
+    await protocolSetStatusApi(protocol.id, newStatus)
+    protocol.status = newStatus ? 1 : 2
     ElMessage.success(t('protocol.protocol_action', { action }))
   }
   catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error(t('protocol.operation_failed_message', { message: error.message || t('protocol.unknown_error') }))
+      const message = error instanceof Error ? error.message : t('protocol.unknown_error')
+      ElMessage.error(t('protocol.operation_failed_message', { message }))
     }
   }
 }

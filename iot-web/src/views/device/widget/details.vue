@@ -1,34 +1,70 @@
-<script setup>
+<script setup lang="ts">
+import type { Device, TslProperty } from '@/types/api'
 import { CopyDocument, Hide, Key, Link, View } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import { deviceChildrenApi, deviceDataLast, deviceDetailApi } from '@/api/index.js'
-import { useAccountStore } from '@/store/modules/account'
+import { deviceChildrenApi, deviceDataLast, deviceDetailApi } from '@/api/index'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 import IotTable from '@/components/IotTable.vue'
-import { onlineOpts } from '@/utils/base.jsx'
+import { useAccountStore } from '@/store/modules/account'
+import { onlineOpts } from '@/utils/base'
 import DeviceEvent from '@/views/device/widget/deviceEvent.vue'
 import DeviceService from '@/views/device/widget/deviceService.vue'
 import LabelItem from '@/views/device/widget/LabelItem.vue'
 import PropChart from '@/views/device/widget/propChart.vue'
 import PropMetric from '@/views/device/widget/PropMetric.vue'
 
+/** 面包屑条目 */
+interface BreadcrumbItem {
+  /** 展示文案 */
+  label: string
+  /** 路由地址（末级没有） */
+  path?: string
+}
+
+/** WebSocket 推送的遥测消息 */
+interface TelemetryMessage {
+  /** 频道 */
+  channel?: string
+  /** 负载 */
+  data?: {
+    /** 设备编号 */
+    deviceKey?: string
+    /** 属性列表 */
+    properties?: Array<{ identifier: string, value: string | number }>
+  }
+}
+
+/**
+ * 设备属性实时值。
+ *
+ * 后端 `/device/data/property/last` 返回的是 key/value 结构，
+ * 其中 value 落在字符串 / 数值上。
+ */
+interface DevicePropValue {
+  /** 属性标识符 */
+  key: string
+  /** 属性当前值 */
+  value: string | number
+}
+
 const { t } = useI18n()
 const activeName = ref('control')
 const route = useRoute()
-const id = route.query.id
-const deviceDetail = ref({})
+/** 路由参数：设备 ID（运行时仍是 query 里的原始值，这里只做类型收窄） */
+const id = route.query.id as unknown as number
+const deviceDetail = ref<Device>({} as Device)
 const propDialogShow = ref(false)
-const devicePropData = ref(null)
-const tslPropOpt = ref(null)
+const devicePropData = ref<DevicePropValue[] | null>(null)
+const tslPropOpt = ref<TslProperty>({} as TslProperty)
 const secretVisible = ref(false)
 
-const childDevices = ref([])
+const childDevices = ref<Device[]>([])
 const loadingChildren = ref(false)
 
-const breadcrumbs = computed(() => [
+const breadcrumbs = computed<BreadcrumbItem[]>(() => [
   { label: t('menu.device'), path: '/device' },
   { label: t('device.device_detail') },
 ])
@@ -67,7 +103,7 @@ async function loadData() {
 
   try {
     const deviceDataRes = await deviceDataLast(data.deviceKey)
-    devicePropData.value = deviceDataRes.data
+    devicePropData.value = deviceDataRes.data as DevicePropValue[]
   }
   catch {
     devicePropData.value = []
@@ -78,19 +114,27 @@ async function loadData() {
   try {
     const { data: children } = await deviceChildrenApi(id)
     childDevices.value = children || []
-  } catch {
+  }
+  catch {
     childDevices.value = []
-  } finally {
+  }
+  finally {
     loadingChildren.value = false
   }
 }
 
-function dictTsl(identifier) {
+/**
+ * 取物模型属性定义。
+ *
+ * 设备上报的属性在物模型里应当总能查到，查不到时返回空对象占位，
+ * 避免模板层出现空引用。
+ */
+function dictTsl(identifier: string): TslProperty {
   const properties = deviceDetail.value.tslModel?.properties
-  return properties?.find(item => item.identifier === identifier)
+  return properties?.find(item => item.identifier === identifier) ?? ({} as TslProperty)
 }
 
-function showPro(identifier) {
+function showPro(identifier: string) {
   tslPropOpt.value = dictTsl(identifier)
   propDialogShow.value = true
 }
@@ -99,7 +143,7 @@ function toggleSecretVisible() {
   secretVisible.value = !secretVisible.value
 }
 
-async function copyValue(value, label) {
+async function copyValue(value: string, label: string) {
   if (!value || value === '-') {
     ElMessage.warning(t('device.no_copy_content', { label }))
     return
@@ -126,28 +170,41 @@ async function copyValue(value, label) {
 loadData()
 
 // ponytail: WS for live property updates, no reconnect. Page refresh if WS drops.
-let ws = null
+let ws: WebSocket | null = null
 onMounted(() => {
   const token = useAccountStore().authorization?.tokenValue
-  if (!token) return
+  if (!token) {
+    return
+  }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws'
   ws = new WebSocket(`${proto}://${location.host}/iot/ws/iot?token=${token}`)
   ws.onmessage = (ev) => {
     try {
-      const msg = JSON.parse(ev.data)
+      const msg = JSON.parse(ev.data) as TelemetryMessage
       if (msg.channel === 'telemetry' && msg.data?.deviceKey === deviceDetail.value.deviceKey) {
         const props = msg.data.properties || []
-        if (!devicePropData.value) devicePropData.value = []
+        if (!devicePropData.value) {
+          devicePropData.value = []
+        }
         for (const p of props) {
           const existing = devicePropData.value.find(item => item.key === p.identifier)
-          if (existing) existing.value = p.value
-          else devicePropData.value.push({ key: p.identifier, value: p.value })
+          if (existing) {
+            existing.value = p.value
+          }
+          else {
+            devicePropData.value.push({ key: p.identifier, value: p.value })
+          }
         }
       }
-    } catch {}
+    }
+    catch {}
   }
 })
-onUnmounted(() => { if (ws) ws.close() })
+onUnmounted(() => {
+  if (ws) {
+    ws.close()
+  }
+})
 
 const childColumns = computed(() => [
   { prop: 'deviceName', label: '设备名称' },
@@ -294,7 +351,9 @@ const childColumns = computed(() => [
         <el-tab-pane label="子设备" name="children">
           <IotTable :columns="childColumns" :data="childDevices" :loading="loadingChildren" :is-page="false">
             <template #online="{ row }">
-              <el-tag :type="row.online ? 'success' : 'info'">{{ row.online ? '在线' : '离线' }}</el-tag>
+              <el-tag :type="row.online ? 'success' : 'info'">
+                {{ row.online ? '在线' : '离线' }}
+              </el-tag>
             </template>
           </IotTable>
         </el-tab-pane>

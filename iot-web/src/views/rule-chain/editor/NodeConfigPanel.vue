@@ -1,76 +1,213 @@
-<script setup>
+<script setup lang="ts">
 /**
  * 规则链节点配置面板
  * 统一管理所有节点类型的配置界面
  */
+import type { CascaderNode, CascaderProps, Resolve } from 'element-plus/es/components/cascader-panel'
+import type {
+  Device,
+  MessageReceive,
+  Product,
+  ProductType,
+  PushConfig,
+  RuleNode,
+  RuleSourceType,
+  TslEvent,
+  TslProperty,
+} from '@/types/api'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { deviceListApi, productListApi, ruleChainTemplateVariablesApi } from '@/api/index.js'
+import {
+  deviceListApi,
+  productListApi,
+  ruleChainTemplateVariablesApi,
+  type RuleTemplateVariable,
+} from '@/api/index'
 import VariableInserter from './VariableInserter.vue'
 
-const props = defineProps({
-  selectedNode: {
-    type: Object,
-    default: null,
-  },
-  ruleChain: {
-    type: Object,
-    default: () => ({}),
-  },
-  tslProperties: {
-    type: Array,
-    default: () => [],
-  },
-  tslEvents: {
-    type: Array,
-    default: () => [],
-  },
-  upstreamNode: {
-    type: Object,
-    default: null,
-  },
-  productOptions: {
-    type: Array,
-    default: () => [],
-  },
-  productTypeOptions: {
-    type: Array,
-    default: () => [],
-  },
-  messageReceiveOptions: {
-    type: Array,
-    default: () => [],
-  },
-  pushConfigOptions: {
-    type: Array,
-    default: () => [],
-  },
-  deviceOptions: {
-    type: Array,
-    default: () => [],
-  },
+// ============================================================================
+// 类型定义
+//
+// 注意：EditorNode / EditorNodeConfig 与 editor/index.vue 中的同名接口保持一致。
+// SFC 之间无法互相导出类型（`<script setup>` 不允许 export），
+// 故这里各留一份；如需共享应抽到 src/types 下（本次改造范围之外）。
+// ============================================================================
+
+/**
+ * 节点配置（前端宽松形状）。
+ *
+ * 后端 `NodeConfig` 是 15 个子类的联合类型（靠 `nodeType` 判别），
+ * 但前端允许自定义节点类型 / 额外字段，且同一个面板会读写所有子类的字段，
+ * 因此这里按「前端实际读写的字段」建模，并保留索引签名兜住未知字段。
+ */
+interface EditorNodeConfig {
+  /** 节点类型判别字段（Jackson 多态） */
+  nodeType?: string
+  /** 监听的属性 / 事件标识符列表 */
+  identifiers?: string[]
+  /** 属性标识符 / 事件标识符 / 指令标识符 */
+  identifier?: string
+  /** 比较运算符 */
+  operator?: string
+  /** 比较值 */
+  value?: unknown
+  /** 事件参数标识符 */
+  paramIdentifier?: string
+  /** 上线状态：online / offline / all */
+  onlineStatus?: string
+  /** cron 表达式 */
+  cron?: string
+  /** 脚本内容 */
+  script?: string
+  /** 脚本语言 */
+  language?: string
+  /** 告警类型 */
+  alarmType?: string
+  /** 告警名称 */
+  alarmName?: string
+  /** 告警严重程度 */
+  severity?: string
+  /** 告警消息 */
+  message?: string
+  /** 清除方式：active / all */
+  clearType?: string
+  /** 消息接收者 ID */
+  messageReceiveId?: number
+  /** 消息标题 */
+  title?: string
+  /** 消息内容 */
+  content?: string
+  /** 引用的推送配置 ID */
+  pushConfigId?: number
+  /** 自定义请求体 */
+  customBody?: string
+  /** 自定义载荷 */
+  customPayload?: string
+  /** 目标模式：self / other */
+  targetMode?: string
+  /** 目标设备 ID */
+  targetDeviceId?: number
+  /** 目标产品 ID（级联选择辅助字段） */
+  targetProductId?: number
+  /** 目标产品类型 ID（级联选择辅助字段） */
+  targetProductTypeId?: number
+  /** 指令类型 */
+  commandType?: string
+  /** 指令参数（JSON 字符串） */
+  params?: string
+  /** 兜住后端未声明的自定义字段 */
+  [key: string]: unknown
+}
+
+/**
+ * 编辑器中的规则链节点。
+ *
+ * 基于后端 `RuleNode`，坐标在前端始终维护（必填），并补上前端的 `color` 字段。
+ * `type` 沿用后端的 `string`（不收窄成 `RuleNodeType`），以免前端自定义节点类型报错。
+ */
+interface EditorNode extends Omit<RuleNode, 'config' | 'x' | 'y'> {
+  x: number
+  y: number
+  config: EditorNodeConfig
+  color: string
+}
+
+/** 规则链（面板只用到级联选择的辅助字段） */
+interface RuleChainForm {
+  id?: number | null
+  name?: string
+  description?: string
+  sourceType?: RuleSourceType
+  sourceId?: number | null
+  productTypeId?: number | null
+  productId?: number | null
+  isRoot?: boolean
+  isEnabled?: boolean
+}
+
+/** 级联选择器的候选项 */
+interface CascadeOption extends Record<string, unknown> {
+  id: number
+  name: string
+  leaf: boolean
+}
+
+/**
+ * 变量插入器的目标元素。
+ *
+ * 与 VariableInserter.vue 中的同名接口保持一致（SFC 之间无法互相导出类型）。
+ */
+interface VariableInsertTarget {
+  input?: HTMLInputElement
+  textarea?: HTMLTextAreaElement
+  $el?: Element & { querySelector?: (selectors: string) => Element | null }
+}
+
+interface Props {
+  /** 当前选中的节点 */
+  selectedNode?: EditorNode | null
+  /** 规则链 */
+  ruleChain?: RuleChainForm
+  /** 物模型属性列表 */
+  tslProperties?: TslProperty[]
+  /** 物模型事件列表 */
+  tslEvents?: TslEvent[]
+  /** 上游输入节点 */
+  upstreamNode?: EditorNode | null
+  /** 产品列表 */
+  productOptions?: Product[]
+  /** 产品类型列表 */
+  productTypeOptions?: ProductType[]
+  /** 消息接收配置列表 */
+  messageReceiveOptions?: MessageReceive[]
+  /** 推送配置列表 */
+  pushConfigOptions?: PushConfig[]
+  /** 设备列表 */
+  deviceOptions?: Device[]
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  selectedNode: null,
+  ruleChain: () => ({}),
+  tslProperties: () => [],
+  tslEvents: () => [],
+  upstreamNode: null,
+  productOptions: () => [],
+  productTypeOptions: () => [],
+  messageReceiveOptions: () => [],
+  pushConfigOptions: () => [],
+  deviceOptions: () => [],
 })
 
-const emit = defineEmits(['update:node'])
+const emit = defineEmits<{
+  'update:node': [node: EditorNode]
+}>()
 
 const { t } = useI18n()
 
 // 本地节点配置
-const config = computed(() => props.selectedNode?.config || {})
+const config = computed<EditorNodeConfig>(() => props.selectedNode?.config || {})
+const propertyThresholdValue = computed<number | null | undefined>(() =>
+  config.value.value as number | null | undefined,
+)
+const eventThresholdValue = computed<string | number | undefined>(() =>
+  config.value.value as string | number | undefined,
+)
 
 // ==================== 模板变量 ====================
-const templateVariables = ref([])
+const templateVariables = ref<RuleTemplateVariable[]>([])
 const loadingVariables = ref(false)
 
 // 加载模板变量
 async function loadTemplateVariables() {
-  if (!props.ruleChain.productId) {
+  const productId = props.ruleChain.productId
+  if (!productId) {
     templateVariables.value = []
     return
   }
   loadingVariables.value = true
   try {
-    const { data } = await ruleChainTemplateVariablesApi(props.ruleChain.productId)
+    const { data } = await ruleChainTemplateVariablesApi(productId)
     templateVariables.value = data || []
   }
   catch (e) {
@@ -98,77 +235,101 @@ const propertyVariables = computed(() =>
 )
 
 // 输入框 ref 集合（用于光标位置插入）
-const alarmMessageRef = ref(null)
-const outputTitleRef = ref(null)
-const outputContentRef = ref(null)
-const httpBodyRef = ref(null)
-const mqttPayloadRef = ref(null)
-const cmdParamsRef = ref(null)
-const filterScriptRef = ref(null)
+const alarmMessageRef = ref<VariableInsertTarget | null>(null)
+const outputTitleRef = ref<VariableInsertTarget | null>(null)
+const outputContentRef = ref<VariableInsertTarget | null>(null)
+const httpBodyRef = ref<VariableInsertTarget | null>(null)
+const mqttPayloadRef = ref<VariableInsertTarget | null>(null)
+const cmdParamsRef = ref<VariableInsertTarget | null>(null)
+const filterScriptRef = ref<VariableInsertTarget | null>(null)
 
 // ==================== 计算属性 ====================
 
 // 可用属性列表（考虑上游节点过滤）
-const availableProperties = computed(() => {
+const availableProperties = computed<TslProperty[]>(() => {
   const upstream = props.upstreamNode
-  if (upstream?.type === 'INPUT_PROPERTY' && upstream.config?.identifiers?.length > 0) {
+  const identifiers = upstream?.config?.identifiers
+  if (upstream?.type === 'INPUT_PROPERTY' && identifiers && identifiers.length > 0) {
     return props.tslProperties.filter(
-      prop => upstream.config.identifiers.includes(prop.identifier),
+      prop => prop.identifier !== undefined && identifiers.includes(prop.identifier),
     )
   }
   return props.tslProperties
 })
 
 // 可用事件列表（考虑上游节点过滤）
-const availableEvents = computed(() => {
+const availableEvents = computed<TslEvent[]>(() => {
   const upstream = props.upstreamNode
-  if (upstream?.type === 'INPUT_EVENT' && upstream.config?.identifiers?.length > 0) {
+  const identifiers = upstream?.config?.identifiers
+  if (upstream?.type === 'INPUT_EVENT' && identifiers && identifiers.length > 0) {
     return props.tslEvents.filter(
-      event => upstream.config.identifiers.includes(event.identifier),
+      event => event.identifier !== undefined && identifiers.includes(event.identifier),
     )
   }
   return props.tslEvents
 })
 
 // 选中的属性
-const selectedProperty = computed(() => {
+const selectedProperty = computed<TslProperty | null>(() => {
   if (!config.value.identifier)
     return null
   return availableProperties.value.find(
     prop => prop.identifier === config.value.identifier,
-  )
+  ) ?? null
 })
 
 // 选中的事件
-const selectedEvent = computed(() => {
+const selectedEvent = computed<TslEvent | null>(() => {
   if (!config.value.identifier)
     return null
   return availableEvents.value.find(
     event => event.identifier === config.value.identifier,
-  )
+  ) ?? null
 })
 
 // 选中的事件参数
-const selectedEventParam = computed(() => {
+const selectedEventParam = computed<TslProperty | null>(() => {
   if (!config.value.paramIdentifier || !selectedEvent.value)
     return null
   return selectedEvent.value.outputParams?.find(
     param => param.identifier === config.value.paramIdentifier,
-  )
+  ) ?? null
 })
 
+/**
+ * 数据类型名称。
+ *
+ * 物模型里的 `dataType` 在旧结构中是对象（含 name / type），在新结构中是数字枚举；
+ * 这里按前端展示需要取出对象形态的 name。
+ */
+function readDataTypeName(dataType: unknown): string | undefined {
+  const typed = dataType as { name?: string } | undefined
+  return typed?.name
+}
+
+// 选中属性的数据类型名称
+const selectedPropertyDataTypeName = computed<string | undefined>(() =>
+  readDataTypeName(selectedProperty.value?.dataType),
+)
+
+// 选中事件参数的数据类型名称
+const selectedEventParamDataTypeName = computed<string | undefined>(() =>
+  readDataTypeName(selectedEventParam.value?.dataType),
+)
+
 // 属性阈值是否有 min/max
-const propertyMin = computed(() => {
-  const v = selectedProperty.value?.min
+const propertyMin = computed<number | null>(() => {
+  const v = selectedProperty.value?.min as number | string | null | undefined
   return v === null || v === undefined || v === '' ? null : Number(v)
 })
-const propertyMax = computed(() => {
-  const v = selectedProperty.value?.max
+const propertyMax = computed<number | null>(() => {
+  const v = selectedProperty.value?.max as number | string | null | undefined
   return v === null || v === undefined || v === '' ? null : Number(v)
 })
-const propertyStep = computed(() => {
-  const t = selectedProperty.value?.dataType?.type
-  return t === 'int' || t === 'INT' || t === 'long' ? 1 : 0.1
+const propertyStep = computed<number>(() => {
+  const dataType = selectedProperty.value?.dataType as unknown as { type?: string } | undefined
+  const typeName = dataType?.type
+  return typeName === 'int' || typeName === 'INT' || typeName === 'long' ? 1 : 0.1
 })
 
 // ==================== 操作符选项 ====================
@@ -186,32 +347,46 @@ const eventOperatorOptions = propertyOperatorOptions
 
 // ==================== 工具函数 ====================
 
-function updateConfig(key, value) {
+/** 合并节点配置后回传（selectedNode 为空时按空节点处理） */
+function emitNode(config: EditorNodeConfig) {
   emit('update:node', {
-    ...props.selectedNode,
-    config: { ...config.value, [key]: value },
+    ...(props.selectedNode as EditorNode),
+    config,
+  })
+}
+
+function updateConfig(key: string, value: unknown) {
+  emitNode({
+    ...config.value,
+    [key]: value,
+  })
+}
+
+// 更新节点名称
+function updateNodeName(name: string) {
+  emit('update:node', {
+    ...(props.selectedNode as EditorNode),
+    name,
   })
 }
 
 // 当选择新事件时，清除参数相关配置
-function onEventIdentifierChange(value) {
-  const newConfig = { ...config.value, identifier: value }
+function onEventIdentifierChange(value: unknown) {
+  const newConfig: EditorNodeConfig = { ...config.value, identifier: value as string }
   delete newConfig.paramIdentifier
   delete newConfig.operator
   delete newConfig.value
-  emit('update:node', {
-    ...props.selectedNode,
-    config: newConfig,
-  })
+  emitNode(newConfig)
 }
 
 // 设备级联选择器配置（懒加载）
-const deviceCascadeProps = {
+const deviceCascadeProps: CascaderProps = {
   lazy: true,
   value: 'id',
   label: 'name',
-  async lazyLoad(node, resolve) {
+  async lazyLoad(node: CascaderNode, resolve: Resolve) {
     const { level, value } = node
+    const id = value as number
     if (level === 0) {
       resolve((props.productTypeOptions || []).map(pt => ({
         id: pt.id,
@@ -221,8 +396,8 @@ const deviceCascadeProps = {
     }
     else if (level === 1) {
       try {
-        const response = await productListApi({ productTypeId: value })
-        const products = (response.data || []).map(p => ({
+        const response = await productListApi({ productTypeId: id })
+        const products = (response.data || []).map((p): CascadeOption => ({
           id: p.id,
           name: p.model || p.manufacturer || t('ruleChain.product_id', { id: p.id }),
           leaf: false,
@@ -236,8 +411,8 @@ const deviceCascadeProps = {
     }
     else if (level === 2) {
       try {
-        const { data } = await deviceListApi({ productId: value })
-        const devices = (data || []).map(d => ({
+        const { data } = await deviceListApi({ productId: id })
+        const devices = (data || []).map((d): CascadeOption => ({
           id: d.id,
           name: d.deviceName,
           leaf: true,
@@ -262,26 +437,21 @@ function getDeviceCascadeValue() {
   return []
 }
 
-function onDeviceCascadeChange(value) {
-  if (!value || value.length < 3) {
+function onDeviceCascadeChange(value: unknown) {
+  const path = Array.isArray(value) ? (value as unknown[]) : []
+  if (!value || path.length < 3) {
     const newConfig = { ...config.value }
     delete newConfig.targetProductTypeId
     delete newConfig.targetProductId
     delete newConfig.targetDeviceId
-    emit('update:node', {
-      ...props.selectedNode,
-      config: newConfig,
-    })
+    emitNode(newConfig)
     return
   }
-  emit('update:node', {
-    ...props.selectedNode,
-    config: {
-      ...config.value,
-      targetProductTypeId: value[0],
-      targetProductId: value[1],
-      targetDeviceId: value[2],
-    },
+  emitNode({
+    ...config.value,
+    targetProductTypeId: path[0] as number,
+    targetProductId: path[1] as number,
+    targetDeviceId: path[2] as number,
   })
 }
 </script>
@@ -293,7 +463,7 @@ function onDeviceCascadeChange(value) {
       <el-form-item :label="t('ruleChain.node_name')">
         <el-input
           :model-value="selectedNode.name"
-          @update:model-value="emit('update:node', { ...selectedNode, name: $event })"
+          @update:model-value="updateNodeName($event)"
         />
       </el-form-item>
 
@@ -316,7 +486,7 @@ function onDeviceCascadeChange(value) {
               v-for="prop in tslProperties"
               :key="prop.identifier"
               :label="`${prop.name} (${prop.identifier})`"
-              :value="prop.identifier"
+              :value="prop.identifier!"
             />
           </el-select>
           <div v-if="!ruleChain.productId" class="form-tip warn">
@@ -345,7 +515,7 @@ function onDeviceCascadeChange(value) {
               v-for="event in tslEvents"
               :key="event.identifier"
               :label="`${event.name} (${event.identifier})`"
-              :value="event.identifier"
+              :value="event.identifier!"
             />
           </el-select>
           <div v-if="!ruleChain.productId" class="form-tip warn">
@@ -416,7 +586,7 @@ function onDeviceCascadeChange(value) {
               v-for="prop in availableProperties"
               :key="prop.identifier"
               :label="`${prop.name} (${prop.identifier})`"
-              :value="prop.identifier"
+              :value="prop.identifier!"
             >
               <span>{{ prop.name }}</span>
               <span class="opt-meta">{{ prop.identifier }}</span>
@@ -443,7 +613,7 @@ function onDeviceCascadeChange(value) {
 
         <el-form-item :label="t('ruleChain.threshold')">
           <el-input-number
-            :model-value="config.value"
+            :model-value="propertyThresholdValue"
             :min="propertyMin ?? undefined"
             :max="propertyMax ?? undefined"
             :step="propertyStep"
@@ -462,7 +632,7 @@ function onDeviceCascadeChange(value) {
         <!-- 属性详细信息 -->
         <el-form-item v-if="selectedProperty" :label="t('ruleChain.property_info')">
           <div class="property-info">
-            <span class="info-chip">{{ selectedProperty.dataType?.name }}</span>
+            <span class="info-chip">{{ selectedPropertyDataTypeName }}</span>
             <span v-if="selectedProperty.unit" class="info-chip">{{ t('ruleChain.unit_value', { value: selectedProperty.unit }) }}</span>
             <span v-if="selectedProperty.accessMode" class="info-chip">{{ selectedProperty.accessMode }}</span>
           </div>
@@ -495,7 +665,7 @@ function onDeviceCascadeChange(value) {
               v-for="event in availableEvents"
               :key="event.identifier"
               :label="`${event.name} (${event.identifier})`"
-              :value="event.identifier"
+              :value="event.identifier!"
             />
           </el-select>
           <div v-if="!ruleChain.productId" class="form-tip warn">
@@ -529,7 +699,7 @@ function onDeviceCascadeChange(value) {
                 v-for="param in selectedEvent.outputParams"
                 :key="param.identifier"
                 :label="`${param.name} (${param.identifier})`"
-                :value="param.identifier"
+                :value="param.identifier!"
               />
             </el-select>
             <div class="form-tip">
@@ -549,11 +719,11 @@ function onDeviceCascadeChange(value) {
               </el-select>
             </el-form-item>
             <el-form-item :label="t('ruleChain.threshold')">
-              <el-input :model-value="config.value" :placeholder="t('ruleChain.enter_threshold')" style="width: 100%" @update:model-value="updateConfig('value', $event)" />
+              <el-input :model-value="eventThresholdValue" :placeholder="t('ruleChain.enter_threshold')" style="width: 100%" @update:model-value="updateConfig('value', $event)" />
             </el-form-item>
             <el-form-item v-if="selectedEventParam" :label="t('ruleChain.parameter_info')">
               <div class="property-info">
-                <span class="info-chip">{{ selectedEventParam.dataType?.name }}</span>
+                <span class="info-chip">{{ selectedEventParamDataTypeName }}</span>
                 <span v-if="selectedEventParam.unit" class="info-chip">{{ t('ruleChain.unit_value', { value: selectedEventParam.unit }) }}</span>
               </div>
             </el-form-item>

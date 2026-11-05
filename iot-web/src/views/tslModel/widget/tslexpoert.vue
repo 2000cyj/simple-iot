@@ -1,16 +1,22 @@
-<script setup>
+<script setup lang="ts">
+import type { TslModel } from '@/types/api'
 import { Document, Loading, WarningFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import JsonViewer from 'vue-json-viewer'
-import { loadTslData } from '@/api/index.js'
+import { loadTslData } from '@/api/index'
 
-const props = defineProps(['productId'])
+interface Props {
+  /** 产品 ID */
+  productId: number
+}
+
+const props = defineProps<Props>()
 const { t } = useI18n()
-const jsonData = ref(null)
+const jsonData = ref<TslModel | null>(null)
 const loading = ref(true)
-const error = ref(null)
+const error = ref<string | null>(null)
 
 // 复制 JSON 到剪贴板
 async function copyJson() {
@@ -30,7 +36,7 @@ onMounted(async () => {
     jsonData.value = data
   }
   catch (e) {
-    error.value = e.message || t('common.load_failed')
+    error.value = e instanceof Error ? e.message : t('common.load_failed')
     console.error('Failed to load TSL data:', e)
   }
   finally {

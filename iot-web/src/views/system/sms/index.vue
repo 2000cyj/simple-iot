@@ -23,7 +23,7 @@ interface DictEnumItemWithDesc {
   /** 枚举常量名 */
   name?: string
   /** @EnumValue 字段的值 */
-  code?: string | number
+  code: string | number
   /** @JsonValue 字段的值 */
   value?: string | number
   /** 备注文案 */
@@ -105,7 +105,7 @@ const { t } = useI18n()
 const activeTab = ref('config')
 const listLoading = ref(true)
 const list = ref<SmsConfig[]>([])
-const suppliers = ref<DictEnumItem[]>([])
+const suppliers = ref<Array<DictEnumItem & { code: string | number }>>([])
 const templateTypes = ref<DictEnumItemWithDesc[]>([])
 const templateList = ref<SmsTemplate[]>([])
 
@@ -228,7 +228,7 @@ async function getList() {
 
 async function getSuppliers() {
   const response = await getSmsSupplier()
-  suppliers.value = response.data
+  suppliers.value = response.data as Array<DictEnumItem & { code: string | number }>
 }
 
 async function getTemplateTypes() {

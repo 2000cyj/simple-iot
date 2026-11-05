@@ -1,14 +1,55 @@
-<script setup>
+<script setup lang="ts">
+import type { FormRules } from 'element-plus'
+import type { KeyValue, PushConfigAddQuery, PushConfigDetail, PushConfigType, PushConfigUpdateQuery } from '@/types/api'
 import { ElMessage } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { pushConfigAddApi, pushConfigEditApi } from '@/api/index.js'
-import { useForm } from '@/composables/useForm.js'
+import { pushConfigAddApi, pushConfigEditApi } from '@/api/index'
+import { useForm } from '@/composables/useForm'
 
-const props = defineProps(['datas', 'modelValue', 'title'])
-const emits = defineEmits(['update', 'update:modelValue'])
+/**
+ * 推送配置表单模型。
+ *
+ * 新增与修改走的是两个不同的请求体，这里取两者的交集：
+ * 既包含新增必填项，也包含修改用的 `id`。
+ */
+type PushConfigForm = PushConfigAddQuery & PushConfigUpdateQuery
+
+/**
+ * Element Plus 表单校验器。
+ *
+ * 三个参数的含义分别是：规则项、被校验值、回调。
+ * 规则项与来源对象本页用不到，这里统一收窄为 `unknown`。
+ */
+type FormValidator = (
+  rule: unknown,
+  value: unknown,
+  callback: (error?: string | Error) => void,
+) => void
+
+interface Props {
+  /** 当前编辑的推送配置，新增时为 null */
+  datas?: Partial<PushConfigDetail> | null
+  /** 弹窗可见性 */
+  modelValue?: boolean
+  /** 弹窗标题 */
+  title?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  datas: null,
+  modelValue: false,
+})
+
+const emit = defineEmits<{
+  /** 保存成功，通知父级刷新列表 */
+  'update': []
+  /** 弹窗可见性变化 */
+  'update:modelValue': [value: boolean]
+}>()
+
 const { t } = useI18n()
-const typeOpt = [
+const typeOpt: Array<{ label: string, value: PushConfigType }> = [
   { label: t('push_config.http'), value: 'HTTP' },
   { label: t('push_config.dialog_mqtt'), value: 'MQTT' },
 ]
@@ -25,20 +66,20 @@ const qosOpt = [
   { label: t('push_config.dialog_text'), value: 2 },
 ]
 
-const blankToEmpty = value => `${value ?? ''}`.trim()
+const blankToEmpty = (value: unknown): string => `${value ?? ''}`.trim()
 
-const { form, onSubmit: handleSubmit, editRef, loading } = useForm({
+const { form, onSubmit: handleSubmit, editRef, loading } = useForm<PushConfigForm>({
   api: props.datas ? pushConfigEditApi : pushConfigAddApi,
   callback: () => {
-    emits('update')
-    emits('update:modelValue', false)
+    emit('update')
+    emit('update:modelValue', false)
   },
 })
 
 const isHttp = computed(() => form.value.type === 'HTTP')
 const isMqtt = computed(() => form.value.type === 'MQTT')
 
-function validateHttpUrl(_rule, value, callback) {
+const validateHttpUrl: FormValidator = (_rule, value, callback) => {
   const url = blankToEmpty(value)
   if (!isHttp.value) {
     callback()
@@ -55,7 +96,7 @@ function validateHttpUrl(_rule, value, callback) {
   callback()
 }
 
-function validateMqttBroker(_rule, value, callback) {
+const validateMqttBroker: FormValidator = (_rule, value, callback) => {
   const broker = blankToEmpty(value)
   if (!isMqtt.value) {
     callback()
@@ -72,7 +113,7 @@ function validateMqttBroker(_rule, value, callback) {
   callback()
 }
 
-function validateMqttTopic(_rule, value, callback) {
+const validateMqttTopic: FormValidator = (_rule, value, callback) => {
   const topic = blankToEmpty(value)
   if (!isMqtt.value) {
     callback()
@@ -89,7 +130,7 @@ function validateMqttTopic(_rule, value, callback) {
   callback()
 }
 
-const rules = ref({
+const rules = ref<FormRules<PushConfigForm>>({
   name: [{ required: true, message: t('push_config.config_name_required'), trigger: 'blur' }],
   type: [{ required: true, message: t('push_config.config_type_required'), trigger: 'change' }],
   httpUrl: [{ validator: validateHttpUrl, trigger: 'blur' }],
@@ -100,13 +141,16 @@ const rules = ref({
 })
 
 // HTTP Headers 数组
-const httpHeaders = ref([])
+const httpHeaders = ref<KeyValue<string, string>[]>([])
 
 // MQTT Options 数组
-const mqttOptions = ref([])
+const mqttOptions = ref<KeyValue<string, string>[]>([])
 
-function normalizeKeyValueList(list) {
-  const normalized = []
+/**
+ * 规整键值对列表：整行都为空则丢弃，只填了一半则视为非法（返回 null）。
+ */
+function normalizeKeyValueList(list: KeyValue<string, string>[]): KeyValue<string, string>[] | null {
+  const normalized: KeyValue<string, string>[] = []
   for (const item of list) {
     const key = blankToEmpty(item.key)
     const value = blankToEmpty(item.value)
@@ -188,7 +232,7 @@ function onSubmit() {
 }
 
 function onCancel() {
-  emits('update:modelValue', false)
+  emit('update:modelValue', false)
 }
 
 // 添加Header项
@@ -197,7 +241,7 @@ function addHeader() {
 }
 
 // 删除Header项
-function removeHeader(index) {
+function removeHeader(index: number) {
   httpHeaders.value.splice(index, 1)
 }
 
@@ -207,12 +251,12 @@ function addMqttOption() {
 }
 
 // 删除MQTT Option项
-function removeMqttOption(index) {
+function removeMqttOption(index: number) {
   mqttOptions.value.splice(index, 1)
 }
 
 // 类型切换时重置字段
-function onTypeChange(val) {
+function onTypeChange(val: PushConfigType) {
   if (val === 'HTTP') {
     resetMqttFields()
   }

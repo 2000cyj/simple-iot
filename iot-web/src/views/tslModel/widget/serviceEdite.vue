@@ -1,12 +1,64 @@
-<script lang="jsx" setup>
+<script setup lang="ts">
+import type { EventTypeEnum, ModelProperty, ModelService, ServiceAddQuery, ServiceTypeEnum, ServiceUpdateQuery } from '@/types/api'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { serviceAddApi, serviceEditeApi } from '@/api'
-import { useForm } from '@/composables/useForm.js'
+import { useForm } from '@/composables/useForm'
 
-const props = defineProps(['datas', 'typeId', 'properties', 'productId', 'modelValue'])
-const emits = defineEmits(['update', 'update:modelValue'])
+/**
+ * 服务表单。
+ *
+ * 后端新增 / 修改服务的入参不同（ServiceAddQuery / ServiceUpdateQuery），
+ * 这里用一份宽松的表单类型承载，提交时再按分支收窄。
+ */
+interface ServiceForm {
+  /** 主键（编辑态才有） */
+  id?: number
+  /** 服务名称 */
+  name?: string
+  /** 标识符 */
+  identifier?: string
+  /** 备注 */
+  remark?: string
+  /** 服务类型：1=服务 2=事件 */
+  serviceType?: ServiceTypeEnum
+  /** 事件类型：1=INFO 2=WARN 3=FAULT */
+  eventType?: EventTypeEnum
+  /** 是否必选 */
+  required?: boolean
+  /** 服务是否异步 */
+  async?: boolean
+  /** 入参属性 ID 列表 */
+  inputParamIds?: number[]
+  /** 出参属性 ID 列表 */
+  outputParamIds?: number[]
+  /** 产品类型 ID */
+  productTypeId?: number
+  /** 产品 ID */
+  productId?: number
+  /** 是否自定义 */
+  custom?: boolean
+}
+
+interface Props {
+  /** 编辑态回填的服务数据 */
+  datas?: ModelService | null
+  /** 产品类型 ID */
+  typeId?: number
+  /** 可选属性列表 */
+  properties: ModelProperty[]
+  /** 产品 ID */
+  productId?: number
+  /** 弹窗可见性 */
+  modelValue?: boolean
+}
+
+const props = defineProps<Props>()
+const emits = defineEmits<{
+  'update': []
+  'update:modelValue': [value: boolean]
+}>()
 const { t } = useI18n()
 const serviceTypeOpt = [
   {
@@ -32,7 +84,7 @@ const eventTypeOpt = [
     value: 3,
   },
 ]
-const currentType = ref(2)
+const currentType = ref<ServiceTypeEnum>(2)
 
 const rules = ref({
   name: [{ required: true, message: t('tsl.property_name_required_2'), trigger: 'blur' }],
@@ -41,7 +93,7 @@ const rules = ref({
   required: [{ required: true, message: t('tsl.required_flag_required'), trigger: 'change' }],
 })
 
-const { form, editRef, loading, onClose } = useForm({
+const { form, editRef, loading, onClose } = useForm<ServiceForm>({
   defForm: {
     productTypeId: props.typeId,
     productId: props.productId,
@@ -50,7 +102,9 @@ const { form, editRef, loading, onClose } = useForm({
     inputParamIds: [],
     serviceType: 1,
   },
-  api: props.datas ? serviceEditeApi : serviceAddApi,
+  // 后端新增 / 修改服务的入参不同，这里按当前是否处于编辑态分派，
+  // 运行时行为与原来的三元表达式完全一致。
+  api: data => (props.datas ? serviceEditeApi(data as ServiceUpdateQuery) : serviceAddApi(data as ServiceAddQuery)),
   callback: () => {
     emits('update')
   },
@@ -73,7 +127,7 @@ async function onSubmit() {
   loading.value = true
   try {
     const func = props.datas ? serviceEditeApi : serviceAddApi
-    await func(form.value)
+    await func(form.value as ServiceUpdateQuery)
     ElMessage.success(t('tsl.operation_succeeded_2'))
     emits('update')
     emits('update:modelValue', false)
@@ -86,13 +140,13 @@ async function onSubmit() {
   }
 }
 
-function changeServiceType(value) {
+function changeServiceType(value: ServiceTypeEnum) {
   currentType.value = value
 }
 
 if (props.datas) {
   form.value = { ...form.value, ...props.datas }
-  currentType.value = props.datas.serviceType
+  currentType.value = props.datas.serviceType as ServiceTypeEnum
 }
 </script>
 

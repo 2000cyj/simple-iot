@@ -1,12 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Property from '@/views/tslModel/widget/property.vue'
 import Service from '@/views/tslModel/widget/service.vue'
 
-defineProps(['typeId', 'productId'])
+interface Props {
+  /** 产品类型 ID */
+  typeId: number
+  /** 产品 ID（标准物模型下为空） */
+  productId?: number
+}
+
+defineProps<Props>()
 const { t } = useI18n()
-const radioGroup = ref('property')
+const radioGroup = ref<'property' | 'service'>('property')
 </script>
 
 <template>

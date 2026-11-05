@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { RuleTemplateVariable } from '@/api/index'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -17,63 +18,73 @@ import { useI18n } from 'vue-i18n'
  *     @update="updateConfig('message', $event)"
  *   />
  */
-const props = defineProps({
-  // 输入框/textarea 的 ref（用于读 selectionStart/End）
-  targetRef: {
-    type: Object,
-    default: null,
-  },
-  // 当前值
-  value: {
-    type: String,
-    default: '',
-  },
-  systemVariables: {
-    type: Array,
-    default: () => [],
-  },
-  propertyVariables: {
-    type: Array,
-    default: () => [],
-  },
-  // 最多展示多少个属性变量，超出折叠
-  maxProperties: {
-    type: Number,
-    default: 8,
-  },
-  // 自定义标题
-  label: {
-    type: String,
-    default: '',
-  },
+
+/**
+ * 变量插入器的目标元素。
+ *
+ * 与 NodeConfigPanel.vue 中的同名接口保持一致（SFC 之间无法互相导出类型）。
+ */
+interface VariableInsertTarget {
+  input?: HTMLInputElement
+  textarea?: HTMLTextAreaElement
+  $el?: Element & { querySelector?: (selectors: string) => Element | null }
+}
+
+interface Props {
+  /** 输入框/textarea 的 ref（用于读 selectionStart/End） */
+  targetRef?: VariableInsertTarget | null
+  /** 当前值 */
+  value?: string
+  /** 系统变量列表 */
+  systemVariables?: RuleTemplateVariable[]
+  /** 属性变量列表 */
+  propertyVariables?: RuleTemplateVariable[]
+  /** 最多展示多少个属性变量，超出折叠 */
+  maxProperties?: number
+  /** 自定义标题 */
+  label?: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  targetRef: null,
+  value: '',
+  systemVariables: () => [],
+  propertyVariables: () => [],
+  maxProperties: 8,
+  label: '',
 })
-const emit = defineEmits(['update'])
+const emit = defineEmits<{
+  update: [value: string]
+}>()
 const { t } = useI18n()
 const hasSystem = computed(() => props.systemVariables.length > 0)
 const hasProperty = computed(() => props.propertyVariables.length > 0)
 const displayLabel = computed(() => props.label || t('ruleChain.available_variables'))
 
 // 获取真正的 input/textarea DOM
-function getInputEl() {
-  const ref = props.targetRef
-  if (!ref)
+function getInputEl(): HTMLInputElement | HTMLTextAreaElement | null {
+  const target = props.targetRef
+  if (!target)
     return null
   // Element Plus 包了一层，真实 DOM 在 .input 或 .textarea
-  return ref.input || ref.textarea || ref.$el?.querySelector('input,textarea') || null
+  return target.input
+    ?? target.textarea
+    ?? (target.$el?.querySelector?.('input,textarea') as HTMLInputElement | HTMLTextAreaElement | null)
+    ?? null
 }
 
-function insertAt(variable) {
+function insertAt(variable: string) {
   const el = getInputEl()
   const current = props.value || ''
+  const start = el?.selectionStart
 
-  if (!el || typeof el.selectionStart !== 'number') {
+  if (!el || typeof start !== 'number') {
     // 拿不到光标，退回追加
     emit('update', current + variable)
     return
   }
 
-  const start = el.selectionStart
-  const end = el.selectionEnd
+  const end = el.selectionEnd as number
   const next = current.slice(0, start) + variable + current.slice(end)
   emit('update', next)
 

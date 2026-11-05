@@ -1,8 +1,8 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { useSidebar } from '@/composables/useSidebar.js'
+import { useSidebar } from '@/composables/useSidebar'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,7 +12,7 @@ const { isCollapsed, isMobileOpen, closeMobile } = useSidebar()
 const menuTree = computed(() => {
   const allRoutes = router.options.routes
   const loyoutChild = allRoutes.find(item => item.name === 'layout')
-  return loyoutChild.children
+  return loyoutChild?.children ?? []
 })
 
 function menuLabel(item) {
@@ -31,7 +31,7 @@ const currRoute = computed(() => route.path)
 </script>
 
 <template>
-  <div class="sidebar-container" :class="{ collapsed: isCollapsed, 'mobile-open': isMobileOpen }">
+  <div class="sidebar-container" :class="{ 'collapsed': isCollapsed, 'mobile-open': isMobileOpen }">
     <el-scrollbar>
       <el-menu
         :default-active="currRoute"

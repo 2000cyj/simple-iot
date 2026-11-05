@@ -1,13 +1,25 @@
-<script lang="jsx" setup>
+<script setup lang="ts">
+import type { ProtocolPayload } from '@/api'
+import type { Protocol, ProtoMessageType, ProtoType } from '@/types/api'
 import { ElMessage } from 'element-plus'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { protocolAddApi, protocolEditApi, protocolTestDecodeApi, protocolTestEncodeApi } from '@/api'
-import { useForm } from '@/composables/useForm.js'
+import { useForm } from '@/composables/useForm'
 import CodeEditor from './CodeEditor.vue'
 
-const props = defineProps(['datas', 'modelValue'])
-const emits = defineEmits(['update', 'update:modelValue'])
+interface Props {
+  /** 编辑态回填的协议数据 */
+  datas?: Protocol | null
+  /** 弹窗可见性 */
+  modelValue?: boolean
+}
+
+const props = defineProps<Props>()
+const emits = defineEmits<{
+  'update': []
+  'update:modelValue': [value: boolean]
+}>()
 const { t } = useI18n()
 const protocolTypeOpt = [
   { label: 'JAVA', value: 1 },
@@ -51,7 +63,7 @@ const rules = ref({
   protoKey: [{ required: true, message: t('protocol.key'), trigger: 'blur' }],
 })
 
-const { form, onSubmit: handleSubmit, editRef, loading } = useForm({
+const { form, onSubmit: handleSubmit, editRef, loading } = useForm<ProtocolPayload>({
   api: props.datas ? protocolEditApi : protocolAddApi,
   callback: () => {
     emits('update')
@@ -61,13 +73,13 @@ const { form, onSubmit: handleSubmit, editRef, loading } = useForm({
 
 const isScriptType = computed(() => form.value.protoType === 3)
 const testDialogVisible = ref(false)
-const testMode = ref('decode')
+const testMode = ref<'decode' | 'encode'>('decode')
 const testLoading = ref(false)
-const testResult = ref(null)
+const testResult = ref<unknown>(null)
 const testForm = ref({
   deviceKey: 'debug-device-001',
   productKey: 'debug-product',
-  messageType: 'PROPERTY',
+  messageType: 'PROPERTY' as ProtoMessageType,
   data: '{"temperature": 25.5, "humidity": 60}',
   identifier: 'setPower',
   paramsText: `{
@@ -79,7 +91,7 @@ const testDialogTitle = computed(() => testMode.value === 'decode' ? t('protocol
 const formattedTestResult = computed(() => testResult.value ? JSON.stringify(testResult.value, null, 2) : '')
 
 // 默认脚本模板
-const scriptTemplates = computed(() => ({
+const scriptTemplates = computed<Record<string, string>>(() => ({
   javascript: t('protocol.script_template_javascript'),
   python: t('protocol.script_template_python'),
   groovy: t('protocol.script_template_groovy'),
@@ -99,7 +111,7 @@ function onCancel() {
   emits('update:modelValue', false)
 }
 
-function openTestDialog(mode) {
+function openTestDialog(mode: 'decode' | 'encode') {
   if (!isScriptType.value) {
     ElMessage.warning(t('protocol.only_script_protocols_support_online_debugging'))
     return
@@ -113,14 +125,20 @@ function openTestDialog(mode) {
   testDialogVisible.value = true
 }
 
-function buildProtocolDraft() {
+/**
+ * 构造用于在线调试的协议草稿。
+ *
+ * 草稿没有 id（后端只拿它做解码 / 编码），但后端 DTO 的 protocol 字段
+ * 类型是完整的 Protocol，这里只在类型层面补齐，不改变实际提交的内容。
+ */
+function buildProtocolDraft(): Protocol {
   return {
     ...form.value,
-    protoType: 3,
+    protoType: 3 as ProtoType,
     scriptLang: form.value.scriptLang || 'javascript',
     protoKey: form.value.protoKey || 'debug-script',
     name: form.value.name || t('common.description'),
-  }
+  } as Protocol
 }
 
 async function runProtocolTest() {
@@ -140,9 +158,9 @@ async function runProtocolTest() {
       return
     }
 
-    let params = {}
+    let params: Record<string, unknown> = {}
     if (testForm.value.paramsText?.trim()) {
-      params = JSON.parse(testForm.value.paramsText)
+      params = JSON.parse(testForm.value.paramsText) as Record<string, unknown>
     }
     const { data } = await protocolTestEncodeApi({
       protocol: buildProtocolDraft(),
@@ -155,9 +173,10 @@ async function runProtocolTest() {
     ElMessage.success(t('protocol.encode_test_succeeded'))
   }
   catch (error) {
+    const detail = error as { msg?: string, message?: string }
     testResult.value = {
       success: false,
-      message: error?.msg || error?.message || t('protocol.dialog_decode'),
+      message: detail.msg || detail.message || t('protocol.dialog_decode'),
       detail: error,
     }
     if (error instanceof SyntaxError) {
@@ -175,7 +194,7 @@ watch(() => props.datas, (val) => {
   }
   else {
     form.value = {
-      protoType: 3,
+      protoType: 3 as ProtoType,
       scriptLang: 'javascript',
     }
     loadScriptTemplate()

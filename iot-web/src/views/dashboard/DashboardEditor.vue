@@ -1,4 +1,7 @@
-<script setup>
+<script setup lang="ts">
+import type { DefineComponent } from 'vue'
+import type { AlarmSeverity, Dashboard, Device, ModelProperty, Product, ProductType } from '@/types/api'
+import type { BaseResult } from '@/types/common'
 import {
   ArrowLeft,
   Check,
@@ -11,25 +14,104 @@ import { ElMessage, ElMessageBox } from 'element-plus'
  * 使用 vue-grid-layout 实现拖拽缩放, 右侧面板配置 widget 属性
  */
 import { computed, onMounted, ref, watch } from 'vue'
-import { GridItem, GridLayout } from 'vue-grid-layout'
+import { GridItem, GridLayout, type GridLayoutProps } from 'vue-grid-layout'
 import { useRoute, useRouter } from 'vue-router'
 import { dashboardDelete, dashboardGet, dashboardSave, dashboardUpdate } from '@/api/dashboard'
 import { deviceListApi, productListApi, productTypeListApi } from '@/api/index'
 import request from '@/utils/request'
 import WidgetRenderer from './WidgetRenderer.vue'
 
+/* eslint-disable vue/no-export-in-script-setup -- vue-grid-layout 具名导出的类型补丁（模块增强） */
+/**
+ * `vue-grid-layout` 的本地类型补丁（src/types/shims.d.ts）只声明了默认导出，
+ * 而上游 3.0.0-beta1 的产物同时提供 GridLayout / GridItem 两个具名导出。
+ * 这里补上具名导出的声明，运行时导入路径与代码完全不变。
+ */
+declare module 'vue-grid-layout' {
+  export const GridLayout: DefineComponent<GridLayoutProps>
+  export const GridItem: DefineComponent<{
+    x?: number
+    y?: number
+    w?: number
+    h?: number
+    i?: string
+  }>
+}
+/* eslint-enable vue/no-export-in-script-setup */
+
+/** 支持的组件类型 */
+type WidgetType =
+  | 'line-chart'
+  | 'gauge'
+  | 'value-card'
+  | 'data-table'
+  | 'bar-chart'
+  | 'device-grid'
+  | 'alarm-list'
+
+/** 组件配置 */
+interface WidgetConfig {
+  /** 组件类型 */
+  type?: WidgetType
+  /** 组件标题（配置面板里可覆盖） */
+  title?: string
+  /** 关联产品 ID */
+  productId?: number | null
+  /** 设备 Key */
+  deviceKey?: string
+  /** 属性标识符 */
+  identifier?: string
+  /** 时间范围（小时） */
+  timeRange?: number
+  /** 单位 */
+  unit?: string
+  /** 仪表盘最小值 */
+  min?: number
+  /** 仪表盘最大值 */
+  max?: number
+  /** 告警级别过滤 */
+  severity?: AlarmSeverity
+}
+
+/** 仪表盘组件（同时也是 vue-grid-layout 的布局项） */
+interface DashboardWidget {
+  /** vue-grid-layout 的布局项 ID */
+  i: string
+  x: number
+  y: number
+  w: number
+  h: number
+  /** 组件标题 */
+  title?: string
+  /** 组件类型（与 config.type 二选一，config 优先） */
+  type?: WidgetType
+  /** 组件配置（编辑器创建的组件必带 config） */
+  config: WidgetConfig
+}
+
+/** 编辑器中的仪表盘草稿：后端实体的可编辑部分（createTime / updateTime 会随实体回填） */
+interface DashboardDraft {
+  id: number | null
+  name: string
+  description?: string
+  isDefault?: boolean
+  createTime?: string
+  updateTime?: string
+  layout: DashboardWidget[]
+}
+
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
-const dashboard = ref({ id: null, name: '', description: '', layout: [] })
-const selectedWidgetIdx = ref(null)
+const dashboard = ref<DashboardDraft>({ id: null, name: '', description: '', layout: [] })
+const selectedWidgetIdx = ref<number | null>(null)
 
 // ponytail: 12列网格, 行高按容器自适应
 const colNum = 12
 const rowHeight = 60
 
-const widgetTypes = [
+const widgetTypes: Array<{ type: WidgetType, label: string, icon: string }> = [
   { type: 'line-chart', label: '折线图', icon: '📈' },
   { type: 'gauge', label: '仪表盘', icon: '⏱' },
   { type: 'value-card', label: '数值卡', icon: '🔢' },
@@ -39,18 +121,21 @@ const widgetTypes = [
   { type: 'alarm-list', label: '告警列表', icon: '🚨' },
 ]
 
-const selectedWidget = computed(() => {
+/** 需要配置「时间范围」的组件类型 */
+const TIME_RANGE_WIDGET_TYPES: WidgetType[] = ['line-chart', 'bar-chart', 'data-table']
+
+const selectedWidget = computed<DashboardWidget | null>(() => {
   if (selectedWidgetIdx.value === null)
     return null
   return dashboard.value.layout[selectedWidgetIdx.value] || null
 })
 
 // 级联选择数据
-const productTypes = ref([])
-const products = ref([])
-const devices = ref([])
-const properties = ref([])
-const filterProductTypeId = ref(null)
+const productTypes = ref<ProductType[]>([])
+const products = ref<Product[]>([])
+const devices = ref<Device[]>([])
+const properties = ref<ModelProperty[]>([])
+const filterProductTypeId = ref<number | null>(null)
 
 const filteredProducts = computed(() => {
   if (!filterProductTypeId.value)
@@ -68,16 +153,16 @@ async function loadProducts() {
   products.value = res.data || []
 }
 
-async function loadDevices(productId) {
-  if (!productId) {
+async function loadDevices(productsId: number) {
+  if (!productsId) {
     devices.value = []
     return
   }
-  const res = await deviceListApi({ productId })
+  const res = await deviceListApi({ productId: productsId })
   devices.value = res.data || []
 }
 
-async function loadProperties(productId) {
+async function loadProperties(productId: number) {
   if (!productId) {
     properties.value = []
     return
@@ -85,7 +170,7 @@ async function loadProperties(productId) {
   const product = products.value.find(p => p.id === productId)
   if (!product)
     return
-  const res = await request({
+  const res = await request<BaseResult<ModelProperty[]>>({
     url: '/model/property/product/type',
     method: 'get',
     params: { productTypeId: product.productTypeId, productId, all: true },
@@ -93,20 +178,29 @@ async function loadProperties(productId) {
   properties.value = res.data || []
 }
 
-function onProductChange(productId) {
-  selectedWidget.value.config.productId = productId
-  selectedWidget.value.config.deviceKey = ''
-  selectedWidget.value.config.identifier = ''
-  loadDevices(productId)
-  loadProperties(productId)
+function onProductChange(productId: number | null) {
+  const widget = selectedWidget.value
+  if (!widget)
+    return
+  widget.config.productId = productId
+  widget.config.deviceKey = ''
+  widget.config.identifier = ''
+  loadDevices(productId as number)
+  loadProperties(productId as number)
 }
 
-function onDeviceChange(deviceKey) {
-  selectedWidget.value.config.deviceKey = deviceKey
+function onDeviceChange(deviceKey: string) {
+  const widget = selectedWidget.value
+  if (!widget)
+    return
+  widget.config.deviceKey = deviceKey
 }
 
-function onPropertyChange(identifier) {
-  selectedWidget.value.config.identifier = identifier
+function onPropertyChange(identifier: string) {
+  const widget = selectedWidget.value
+  if (!widget)
+    return
+  widget.config.identifier = identifier
 }
 
 watch(selectedWidgetIdx, async (idx) => {
@@ -120,7 +214,7 @@ watch(selectedWidgetIdx, async (idx) => {
   }
 })
 
-function addWidget(type) {
+function addWidget(type: WidgetType) {
   const idx = dashboard.value.layout.length
   dashboard.value.layout.push({
     i: `w-${Date.now()}`,
@@ -143,7 +237,7 @@ function addWidget(type) {
   selectedWidgetIdx.value = idx
 }
 
-function removeWidget(idx) {
+function removeWidget(idx: number) {
   dashboard.value.layout.splice(idx, 1)
   if (selectedWidgetIdx.value === idx)
     selectedWidgetIdx.value = null
@@ -151,19 +245,30 @@ function removeWidget(idx) {
     selectedWidgetIdx.value--
 }
 
-function onLayoutUpdated(newLayout) {
+function onLayoutUpdated(newLayout: DashboardWidget[]) {
+  // vue-grid-layout 的 layout-updated 事件回传的就是 layout 数组本身（原地修改 x/y/w/h），
+  // 组件自定义字段（title / config）都还在同一个对象上
   dashboard.value.layout = newLayout
 }
 
 async function loadDashboard() {
-  const id = route.params.id
-  if (!id)
+  const rawId = route.params.id
+  if (!rawId)
     return
+  // 路由参数是字符串，接口路径拼接时同样会被隐式转成字符串，这里保持原有传参方式
+  const id = rawId as unknown as number
   loading.value = true
   try {
     const res = await dashboardGet(id)
     if (res?.data) {
-      dashboard.value = res.data
+      const data = res.data
+      dashboard.value = {
+        ...data,
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        layout: (data.layout ?? []) as unknown as DashboardWidget[],
+      }
       if (!dashboard.value.layout)
         dashboard.value.layout = []
     }
@@ -181,7 +286,7 @@ async function onSave() {
   saving.value = true
   try {
     const fn = dashboard.value.id ? dashboardUpdate : dashboardSave
-    await fn(dashboard.value)
+    await fn(dashboard.value as unknown as Dashboard)
     // ponytail: save API returns Boolean; for new dashboards, re-fetch list to get the id
     if (!dashboard.value.id) {
       ElMessage.success('保存成功')
@@ -384,7 +489,7 @@ onMounted(() => {
                 />
               </el-select>
             </el-form-item>
-            <el-form-item v-if="['line-chart', 'bar-chart', 'data-table'].includes(selectedWidget.config.type)" label="时间范围">
+            <el-form-item v-if="selectedWidget.config.type && TIME_RANGE_WIDGET_TYPES.includes(selectedWidget.config.type)" label="时间范围">
               <el-select v-model="selectedWidget.config.timeRange" style="width: 100%">
                 <el-option :value="1" label="最近1小时" />
                 <el-option :value="6" label="最近6小时" />

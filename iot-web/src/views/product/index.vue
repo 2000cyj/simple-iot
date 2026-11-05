@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { TableParams } from '@/composables/useTable'
+import type { ProductPage, ProductPageQuery, ProductType } from '@/types/api'
 import {
   Box,
   Delete,
@@ -14,19 +16,50 @@ import {
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { productDeleteApi, productPageApi, productTypeListApi } from '@/api/index.js'
+import { productDeleteApi, productPageApi, productTypeListApi } from '@/api/index'
 import IotTable from '@/components/IotTable.vue'
-import { useTable } from '@/composables/useTable.js'
+import { useTable } from '@/composables/useTable'
 import EditDia from '@/views/product/widget/editDia.vue'
+
+/**
+ * 列表视图的列配置。
+ *
+ * 这是运行时数组（不是编译期常量），字段含义与 IotTable 的列定义保持一致：
+ * - `prop` 字段名、`label` 表头、`width` 列宽
+ * - `slot` 自定义插槽名（本页的图标 / 操作列走插槽渲染）
+ */
+interface TableColumn {
+  /** 字段名 */
+  prop?: string
+  /** 表头文案 */
+  label?: string
+  /** 列宽 */
+  width?: number
+  /** 自定义插槽名 */
+  slot?: string
+}
+
+/**
+ * 表格行数据。
+ *
+ * 后端 `ProductPageVo` 没有返回 `parentId` / `createTime`，
+ * 但模板的展开行会读取这两个字段，这里按「可能存在」建模。
+ */
+interface ProductRow extends ProductPage {
+  /** 父级产品 ID（后端分页项未返回） */
+  parentId?: number
+  /** 创建时间（后端分页项未返回） */
+  createTime?: string
+}
 
 const { t } = useI18n()
 const router = useRouter()
 const parentId = ref(-1)
-const productTypeList = ref([])
-const viewMode = ref('card') // 'card' | 'table'
+const productTypeList = ref<ProductType[]>([])
+const viewMode = ref<'card' | 'table'>('card')
 
 const {
-  params,
+  params: tableParams,
   dialogVisible,
   updatePage,
   onSearch,
@@ -41,38 +74,55 @@ const {
   currentItem,
   onPageChange,
   onSizeChange,
-} = useTable({
-  deleteApi: productDeleteApi,
-  fetchApi: productPageApi,
+} = useTable<ProductRow>({
+  deleteApi: id => productDeleteApi(id as number),
+  fetchApi: query => productPageApi(query as unknown as ProductPageQuery),
   diaName: t('product.product'),
   defParams: {},
 })
 
+/**
+ * 搜索栏查询参数。
+ *
+ * useTable 的 `params` 是 `Record<string, unknown>`，直接用在 v-model 上
+ * 会让绑定值退化成 unknown，这里补一个业务字段视图（运行时仍是同一个对象）。
+ */
+interface ProductSearchParams {
+  /** 产品类型 ID */
+  productTypeId?: number
+  /** 产品型号 */
+  model?: string
+  /** 厂家 */
+  manufacturer?: string
+}
+
+const params = tableParams as TableParams & ProductSearchParams
+
 // 计算产品数据（兼容卡片和列表视图）
-const products = computed(() => tableData.value || [])
+const products = computed<ProductRow[]>(() => tableData.value || [])
 
 function closeEdite() {
   updatePage()
 }
 
-function onAddChild(row) {
+function onAddChild(row: ProductRow) {
   parentId.value = row.id
   dialogVisible.value = true
   diaTitle.value = t('product.add_sub_product')
 }
 
-function tslConfig(row) {
+function tslConfig(row: ProductRow) {
   router.push(`/tslModel?typeId=${row.productTypeId}&productId=${row.id}`)
 }
 
 // 获取产品类型名称
-function getProductTypeName(typeId) {
-  const type = productTypeList.value.find(t => t.id === typeId)
+function getProductTypeName(typeId?: number): string {
+  const type = productTypeList.value.find(item => item.id === typeId)
   return type?.name || t('product.unknown_type')
 }
 
 // 跳转到设备列表
-function goToDevices(product) {
+function goToDevices(product: ProductRow) {
   router.push({
     path: '/device',
     query: { productId: product.id },
@@ -80,7 +130,7 @@ function goToDevices(product) {
 }
 
 // 处理下拉菜单命令
-function handleCommand(command, product) {
+function handleCommand(command: string | number | object, product: ProductRow) {
   switch (command) {
     case 'config':
       tslConfig(product)
@@ -95,7 +145,7 @@ function handleCommand(command, product) {
 }
 
 // 列表视图的列配置
-const column = [
+const column: TableColumn[] = [
   {
     prop: 'cz',
     width: 60,

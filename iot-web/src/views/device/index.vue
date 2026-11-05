@@ -1,24 +1,65 @@
-<script setup>
+<script setup lang="ts">
+import type { VNode } from 'vue'
+import type { DevicePage, DevicePageQuery, Product } from '@/types/api'
 import { Cpu, Delete, Download, Edit, Monitor, RefreshRight } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { computed, h, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { batchDeviceServiceApi, deviceDeleteApi, devicePageApi, manufacturerListApi, productListApi, productTypeListApi } from '@/api/index.js'
+import { batchDeviceServiceApi, deviceDeleteApi, devicePageApi, manufacturerListApi, productListApi, productTypeListApi } from '@/api/index'
 import IotTable from '@/components/IotTable.vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { useTable } from '@/composables/useTable.js'
-import { activateOpts, onlineOpts } from '@/utils/base.jsx'
+import { useTable } from '@/composables/useTable'
+import { activateOpts, onlineOpts } from '@/utils/base'
 import EditDia from '@/views/device/widget/editDia.vue'
+
+/**
+ * 产品类型下拉项。
+ *
+ * 后端 `ProductType.status` 是必填数字，但老接口可能不下发该字段，
+ * 页面需要用 `status === undefined` 兜底，故此处声明为可选。
+ */
+interface ProductTypeOption {
+  /** 产品类型 ID */
+  id: number
+  /** 产品类型名称 */
+  name: string
+  /** 1 启用 2 禁用 */
+  status?: number
+}
+
+/** 设备列表的列配置 */
+interface DeviceColumn {
+  /** 列类型（selection 等） */
+  type?: string
+  /** 列字段 */
+  prop?: string
+  /** 列标题 */
+  label?: string
+  /** 列宽 */
+  width?: number
+  /** 自定义插槽名 */
+  slot?: string
+  /** 自定义渲染 */
+  render?: (ctx: { row: DevicePage }) => VNode | string
+}
+
+/** 批量指令表单 */
+interface BatchCommandForm {
+  /** 服务标识符 */
+  identifier: string
+  /** 服务参数（JSON 字符串） */
+  params: string
+}
 
 const router = useRouter()
 const { t } = useI18n()
 const parentId = ref(-1)
-const productTypeList = ref([])
-const manufacturerListOpt = ref([])
-const productListOpt = ref([])
+const productTypeList = ref<ProductTypeOption[]>([])
+const manufacturerListOpt = ref<string[]>([])
+const productListOpt = ref<Product[]>([])
 
-const column = computed(() => [
+const column = computed<DeviceColumn[]>(() => [
   {
     type: 'selection',
     width: 55,
@@ -74,6 +115,16 @@ const column = computed(() => [
   },
 ])
 
+/**
+ * 设备分页查询。
+ *
+ * `useTable` 的 fetchApi 形参是 `Record<string, unknown>`，
+ * 后端分页接口要求 `DevicePageQuery`，这里做一次显式转换。
+ */
+function fetchDevicePage(query: Record<string, unknown>) {
+  return devicePageApi(query as unknown as DevicePageQuery)
+}
+
 const {
   params,
   dialogVisible,
@@ -90,28 +141,58 @@ const {
   onEdit,
   onPageChange,
   onSizeChange,
-} = useTable({
-  deleteApi: deviceDeleteApi,
-  fetchApi: devicePageApi,
+} = useTable<DevicePage>({
+  deleteApi: id => deviceDeleteApi(id as number),
+  fetchApi: fetchDevicePage,
   diaName: t('device.device'),
   defParams: {
     parentId: parentId.value,
   },
 })
 
+const productTypeId = computed<number | undefined>({
+  get: () => typeof params.productTypeId === 'number' ? params.productTypeId : undefined,
+  set: value => params.productTypeId = value,
+})
+const manufacturer = computed<string | undefined>({
+  get: () => typeof params.manufacturer === 'string' ? params.manufacturer : undefined,
+  set: value => params.manufacturer = value,
+})
+const productId = computed<number | undefined>({
+  get: () => typeof params.productId === 'number' ? params.productId : undefined,
+  set: value => params.productId = value,
+})
+const deviceKey = computed<string | undefined>({
+  get: () => typeof params.deviceKey === 'string' ? params.deviceKey : undefined,
+  set: value => params.deviceKey = value,
+})
+
 function closeEdite() {
   updatePage()
 }
 
-function showDetails(row) {
+function showDetails(row: DevicePage) {
   router.push(`/deviceDetails?id=${row.id}`)
+}
+
+// 导出 Excel
+function exportDevice() {
+  window.open('/iot/device/export')
 }
 
 // 批量指令
 const batchDialogVisible = ref(false)
-const batchForm = ref({ identifier: '', params: '{}' })
+const batchForm = ref<BatchCommandForm>({ identifier: '', params: '{}' })
 const batchLoading = ref(false)
-const selectedRows = ref([])
+const selectedRows = ref<DevicePage[]>([])
+/** 服务参数的输入提示 */
+const batchParamsPlaceholder = '{"value": 1}'
+
+function onSelectionChange(rows: unknown[]) {
+  selectedRows.value = rows.filter((row): row is DevicePage =>
+    typeof row === 'object' && row !== null && 'id' in row && 'deviceKey' in row,
+  )
+}
 
 function onBatchCommand() {
   if (selectedRows.value.length === 0) {
@@ -127,10 +208,11 @@ async function onBatchSend() {
     ElMessage.warning('请输入服务标识符')
     return
   }
-  let parsedParams = {}
+  let parsedParams: Record<string, unknown> = {}
   try {
-    parsedParams = JSON.parse(batchForm.value.params)
-  } catch {
+    parsedParams = JSON.parse(batchForm.value.params) as Record<string, unknown>
+  }
+  catch {
     ElMessage.warning('参数 JSON 格式错误')
     return
   }
@@ -140,9 +222,11 @@ async function onBatchSend() {
     await batchDeviceServiceApi(batchForm.value.identifier, { deviceKeys, params: parsedParams })
     ElMessage.success(`已向 ${deviceKeys.length} 台设备发送指令`)
     batchDialogVisible.value = false
-  } catch (e) {
+  }
+  catch {
     ElMessage.error('发送失败')
-  } finally {
+  }
+  finally {
     batchLoading.value = false
   }
 }
@@ -154,7 +238,7 @@ function changeProductType() {
 
   if (params.productTypeId) {
     manufacturerListApi({
-      productTypeId: params.productTypeId,
+      productTypeId: params.productTypeId as number,
     })
       .then(({ data }) => {
         manufacturerListOpt.value = data
@@ -173,8 +257,8 @@ function changeManufacturer() {
     return
   }
   productListApi({
-    productTypeId: params.productTypeId,
-    manufacturer: params.manufacturer,
+    productTypeId: params.productTypeId as number | undefined,
+    manufacturer: params.manufacturer as string | undefined,
   })
     .then(({ data }) => {
       productListOpt.value = data
@@ -211,7 +295,7 @@ onMounted(() => {
         <div class="form-row">
           <el-form-item :label="t('product.product_type')">
             <el-select
-              v-model="params.productTypeId"
+              v-model="productTypeId"
               :placeholder="t('common.placeholder_select', { field: t('product.product_type') })"
               filterable
               clearable
@@ -228,7 +312,7 @@ onMounted(() => {
 
           <el-form-item :label="t('device.manufacturer')">
             <el-select
-              v-model="params.manufacturer"
+              v-model="manufacturer"
               :placeholder="t('common.placeholder_select', { field: t('device.manufacturer') })"
               filterable
               clearable
@@ -245,7 +329,7 @@ onMounted(() => {
 
           <el-form-item :label="t('device.product_model')">
             <el-select
-              v-model="params.productId"
+              v-model="productId"
               :placeholder="t('common.placeholder_select', { field: t('device.product_model') })"
               filterable
               clearable
@@ -260,7 +344,7 @@ onMounted(() => {
           </el-form-item>
 
           <el-form-item :label="t('device.device_key')">
-            <el-input v-model="params.deviceKey" clearable :placeholder="t('common.placeholder_input', { field: t('device.device_key') })" @keyup.enter="onSearch" />
+            <el-input v-model="deviceKey" clearable :placeholder="t('common.placeholder_input', { field: t('device.device_key') })" @keyup.enter="onSearch" />
           </el-form-item>
         </div>
 
@@ -272,14 +356,14 @@ onMounted(() => {
           <el-button :icon="RefreshRight" @click="resetFilters">
             {{ t('common.reset') }}
           </el-button>
-          <el-button :icon="Download" @click="() => window.open('/iot/device/export')">
+          <el-button :icon="Download" @click="exportDevice">
             导出 Excel
           </el-button>
           <el-button type="primary" @click="onAdd">
             <span class="btn-icon">+</span>
             {{ t('device.add_device') }}
           </el-button>
-          <el-button type="warning" @click="onBatchCommand" :disabled="selectedRows.length === 0">
+          <el-button type="warning" :disabled="selectedRows.length === 0" @click="onBatchCommand">
             批量指令 ({{ selectedRows.length }})
           </el-button>
         </div>
@@ -297,7 +381,7 @@ onMounted(() => {
         :loading="loading"
         @page-change="onPageChange"
         @size-change="onSizeChange"
-        @selection-change="(val) => selectedRows = val"
+        @selection-change="onSelectionChange"
       >
         <template #cz="{ row }">
           <el-button type="primary" link :icon="Monitor" @click="showDetails(row)">
@@ -333,12 +417,16 @@ onMounted(() => {
           <el-input v-model="batchForm.identifier" placeholder="如：setSwitch" />
         </el-form-item>
         <el-form-item label="服务参数">
-          <el-input v-model="batchForm.params" type="textarea" :rows="4" placeholder='{"value": 1}' />
+          <el-input v-model="batchForm.params" type="textarea" :rows="4" :placeholder="batchParamsPlaceholder" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="batchDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="batchLoading" @click="onBatchSend">发送</el-button>
+        <el-button @click="batchDialogVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" :loading="batchLoading" @click="onBatchSend">
+          发送
+        </el-button>
       </template>
     </el-dialog>
   </div>

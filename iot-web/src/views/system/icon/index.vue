@@ -31,6 +31,9 @@ const {
   defParams: {},
 })
 
+// IconQuery describes the name field that the generic table params cannot infer.
+const iconSearchParams = params as typeof params & IconQuery
+
 function closeEdite() {
   updatePage()
 }
@@ -61,7 +64,7 @@ onMounted(() => {
         <div class="search-input">
           <label class="input-label">{{ t('system.icon_name') }}</label>
           <el-input
-            v-model="params.name"
+            v-model="iconSearchParams.name"
             clearable
             :placeholder="t('system.enter_icon_name_search')"
             prefix-icon="Search"

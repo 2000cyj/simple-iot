@@ -1,96 +1,80 @@
-<script setup>
+<script setup lang="ts" generic="TRow extends object = object">
+import type { VNode } from 'vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { normalizePage } from '@/utils/page.js'
+import { normalizePage } from '@/utils/page'
 
-const props = defineProps({
-  // 新风格：数据数组
-  data: {
-    type: Array,
-    default: () => [],
-  },
-  // 新风格：列配置（复数）
-  columns: {
-    type: Array,
-    default: () => [],
-  },
-  // 旧风格：列配置（单数）- 兼容旧代码
-  column: {
-    type: Array,
-    default: () => [],
-  },
-  // 旧风格：API 函数
-  api: {
-    type: Function,
-    default: null,
-  },
-  // 旧风格：请求参数
-  params: {
-    type: Object,
-    default: () => ({}),
-  },
-  // 旧风格：是否分页
-  isPage: {
-    type: Boolean,
-    default: true,
-  },
-  // 旧风格：row-key
-  rowKey: {
-    type: String,
-    default: '',
-  },
-  // 总数
-  total: {
-    type: Number,
-    default: 0,
-  },
-  // 当前页
-  currentPage: {
-    type: Number,
-    default: 1,
-  },
-  // 每页条数
-  pageSize: {
-    type: Number,
-    default: 20,
-  },
-  // 加载状态
-  loading: {
-    type: Boolean,
-    default: false,
-  },
-  // 是否自适应列宽（铺满表格）
-  autoFit: {
-    type: Boolean,
-    default: true,
-  },
-  // 表格密度: 'compact' | 'comfortable'
-  density: {
-    type: String,
-    default: 'comfortable',
-    validator: v => ['compact', 'comfortable'].includes(v),
-  },
+type Callable = (...args: never[]) => unknown
+
+interface TableColumn {
+  prop?: string
+  label?: string
+  width?: number | string
+  minWidth?: number | string
+  fixed?: string | boolean
+  align?: string
+  headerAlign?: string
+  type?: string
+  slot?: string
+  formatter?: Callable
+  render?: Callable
+}
+
+interface Props {
+  data?: TRow[]
+  columns?: TableColumn[]
+  column?: TableColumn[]
+  api?: Callable | null
+  params?: Record<string, unknown>
+  isPage?: boolean
+  rowKey?: string
+  total?: number
+  currentPage?: number
+  pageSize?: number
+  loading?: boolean
+  autoFit?: boolean
+  density?: 'compact' | 'comfortable'
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  data: () => [],
+  columns: () => [],
+  column: () => [],
+  api: null,
+  params: () => ({}),
+  isPage: true,
+  rowKey: '',
+  total: 0,
+  currentPage: 1,
+  pageSize: 20,
+  loading: false,
+  autoFit: true,
+  density: 'comfortable',
 })
 
-const emit = defineEmits(['pageChange', 'sizeChange', 'selectionChange'])
+const emit = defineEmits<{
+  pageChange: [page: number]
+  sizeChange: [size: number]
+  selectionChange: [selection: TRow[]]
+}>()
 const { t } = useI18n()
 
-const innerPage = ref(props.currentPage)
-const innerSize = ref(props.pageSize)
-const innerData = ref(props.data || [])
+const innerPage = ref<number>(props.currentPage)
+const innerSize = ref<number>(props.pageSize)
+const innerData = ref<TRow[]>(props.data)
 const innerLoading = ref(false)
-const dwTable = ref()
+const dwTable = ref<unknown>()
 
 // 兼容：优先使用 columns，否则使用 column
-const finalColumns = computed(() => {
-  const cols = (props.columns && props.columns.length > 0) ? props.columns : (props.column || [])
+const finalColumns = computed<TableColumn[]>(() => {
+  const cols = props.columns.length > 0 ? props.columns : props.column
   return cols.map((col) => {
     const column = { ...col }
 
     // 处理 formatter 函数 - 转换为 render 函数
     if (column.formatter && typeof column.formatter === 'function') {
       const formatterFn = column.formatter
-      column.render = ({ row }) => formatterFn(row, column, row[column.prop])
+      column.render = ({ row }) => Reflect.apply(formatterFn, undefined, [row, column, column.prop ? Reflect.get(row, column.prop) : undefined]) as unknown
     }
 
     // 处理 slot: 'expand' - 转换为 type: 'expand'
@@ -104,8 +88,8 @@ const finalColumns = computed(() => {
 })
 
 // 获取 expand 列配置
-const expandColumn = computed(() => {
-  const cols = props.columns || props.column || []
+const expandColumn = computed<TableColumn | undefined>(() => {
+  const cols = props.columns.length > 0 ? props.columns : props.column
   return cols.find(col => col.slot === 'expand')
 })
 
@@ -118,7 +102,17 @@ const tableData = computed(() => isApiMode.value ? innerData.value : props.data)
 // 实际使用的加载状态
 const tableLoading = computed(() => isApiMode.value ? innerLoading.value : props.loading)
 
-function pageChange(page) {
+function getCellValue(row: object, prop?: string): unknown {
+  return prop ? Reflect.get(row, prop) : undefined
+}
+
+function renderCell(column: TableColumn, row: object): unknown {
+  return column.render
+    ? Reflect.apply(column.render, undefined, [{ row, column }]) as unknown
+    : undefined
+}
+
+function pageChange(page: number): void {
   innerPage.value = page
   emit('pageChange', page)
   if (isApiMode.value) {
@@ -126,7 +120,7 @@ function pageChange(page) {
   }
 }
 
-function sizeChange(size) {
+function sizeChange(size: number): void {
   innerSize.value = size
   emit('sizeChange', size)
   if (isApiMode.value) {
@@ -134,28 +128,28 @@ function sizeChange(size) {
   }
 }
 
-function selectionChange(selection) {
+function selectionChange(selection: TRow[]): void {
   emit('selectionChange', selection)
 }
 
 // 判断是否为 VNode
-function isVNode(value) {
-  return value && typeof value === 'object' && ('__v_isVNode' in value || '$el' in value || 'type' in value)
+function isVNode(value: unknown): value is VNode {
+  return !!value && typeof value === 'object' && ('__v_isVNode' in value || '$el' in value || 'type' in value)
 }
 
 // 旧风格：通过 API 获取数据
-async function fetchData() {
+async function fetchData(): Promise<void> {
   if (!props.api)
     return
 
   innerLoading.value = true
   try {
-    const res = await props.api({
+    const res: unknown = await Reflect.apply(props.api, undefined, [{
       ...props.params,
       page: innerPage.value,
       size: innerSize.value,
-    })
-    innerData.value = normalizePage(res).records
+    }])
+    innerData.value = normalizePage<TRow>(res).records
   }
   catch (e) {
     console.error('IotTable fetchData error:', e)
@@ -244,12 +238,12 @@ defineExpose({
           />
           <!-- VNode 渲染 -->
           <component
-            :is="col.render({ row, column: col })"
-            v-else-if="col.render && isVNode(col.render({ row, column: col }))"
+            :is="renderCell(col, row)"
+            v-else-if="col.render && isVNode(renderCell(col, row))"
           />
           <!-- 字符串/普通值渲染 -->
-          <span v-else-if="col.render">{{ col.render({ row, column: col }) ?? row[col.prop] ?? '-' }}</span>
-          <span v-else>{{ row[col.prop] ?? '-' }}</span>
+          <span v-else-if="col.render">{{ renderCell(col, row) ?? getCellValue(row, col.prop) ?? '-' }}</span>
+          <span v-else>{{ getCellValue(row, col.prop) ?? '-' }}</span>
         </template>
       </el-table-column>
       <slot name="operations" />
