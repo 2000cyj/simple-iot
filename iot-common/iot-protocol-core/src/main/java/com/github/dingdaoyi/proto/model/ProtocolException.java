@@ -3,6 +3,8 @@ package com.github.dingdaoyi.proto.model;
 import lombok.Getter;
 
 /**
+ * 协议异常
+ *
  * @author dingyunwei
  */
 @Getter

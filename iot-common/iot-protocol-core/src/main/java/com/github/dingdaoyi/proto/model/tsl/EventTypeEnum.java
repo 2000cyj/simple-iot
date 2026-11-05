@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
+ * 物模型事件类型
+ *
  * @author dingyunwei
  */
-
 @Getter
 public enum EventTypeEnum {
     INFO(1),WARN(2),FAULT(3);

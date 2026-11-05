@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
+ * 设备服务响应数据
+ *
  * @author dingyunwei
  */
 @Data

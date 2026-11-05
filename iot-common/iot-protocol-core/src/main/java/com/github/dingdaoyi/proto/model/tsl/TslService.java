@@ -6,6 +6,8 @@ import lombok.Data;
 import java.util.List;
 
 /**
+ * 物模型服务定义
+ *
  * @author dingyunwei
  */
 @Data

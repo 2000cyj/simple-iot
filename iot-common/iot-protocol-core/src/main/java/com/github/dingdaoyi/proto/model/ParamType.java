@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
+ * 物模型参数类型
+ *
  * @author dingyunwei
  */
-
 @Getter
 public enum ParamType {
     PROPERTY(1),PARAM(2),

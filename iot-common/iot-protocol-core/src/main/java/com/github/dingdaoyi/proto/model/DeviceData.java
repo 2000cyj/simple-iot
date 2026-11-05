@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
+ * 设备属性数据
+ *
  * @author dingyunwei
  */
 @AllArgsConstructor

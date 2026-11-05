@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 /**
+ * 物模型属性读写模式
+ *
  * @author dingyunwei
  */
-
 @Getter
 public enum PropertyAccessMode {
     READE("r"),

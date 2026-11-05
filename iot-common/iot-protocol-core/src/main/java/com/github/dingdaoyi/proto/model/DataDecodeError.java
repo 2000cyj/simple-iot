@@ -3,6 +3,11 @@ package com.github.dingdaoyi.proto.model;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+/**
+ * 数据解析错误信息
+ *
+ * @author dingyunwei
+ */
 @Data
 @AllArgsConstructor
 public class DataDecodeError {

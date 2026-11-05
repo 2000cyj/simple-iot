@@ -2,9 +2,10 @@ package com.github.dingdaoyi.proto.model;
 
 
 /**
+ * 协议异常类型
+ *
  * @author dingyunwei
  */
-
 public enum ExceptionType {
     PRODUCT_NOT_FOUND(2001,"产品key不正确,忽略解析"),
     TSL_MODEL_NOT_CONFIG(2002,"未配置物模型,无法解析"),

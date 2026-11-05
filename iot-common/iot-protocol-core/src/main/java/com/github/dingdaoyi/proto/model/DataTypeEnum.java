@@ -11,9 +11,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * 物模型数据类型枚举
+ *
  * @author dingyunwei
  */
-
 @SuppressWarnings("ALL")
 @Getter
 public enum DataTypeEnum {

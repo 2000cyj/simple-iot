@@ -5,6 +5,8 @@ import lombok.Data;
 import java.util.Map;
 
 /**
+ * 协议编码结果
+ *
  * @author dwx
  */
 @Data

@@ -4,6 +4,8 @@ import com.github.dingdaoyi.proto.model.*;
 import com.github.dingdaoyi.proto.model.tsl.TslModel;
 
 /**
+ * 协议编解码器接口
+ *
  * @author dingyunwei
  */
 public interface ProtocolDecoder {

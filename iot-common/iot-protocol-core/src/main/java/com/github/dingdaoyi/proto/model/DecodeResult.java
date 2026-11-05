@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 协议解析结果
+ *
  * @author dingyunwei
  */
 @Data

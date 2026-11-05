@@ -9,6 +9,8 @@ import lombok.Data;
 import java.util.List;
 
 /**
+ * 物模型属性定义
+ *
  * @author dingyunwei
  */
 @Schema(description = "属性")

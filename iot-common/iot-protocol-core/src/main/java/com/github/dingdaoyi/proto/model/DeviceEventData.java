@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 设备事件数据
+ *
  * @author dingyunwei
  */
 @Data
