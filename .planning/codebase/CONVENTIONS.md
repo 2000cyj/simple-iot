@@ -334,8 +334,8 @@ public class DeviceController {
 
     @PostMapping("page")
     @Operation(summary = "设备分页列表")
-    public PageResult<DevicePageVo> page(@RequestBody @Valid DevicePageQuery query) {
-        return deviceService.pageByQuery(query);
+    public BaseResult<PageResult<DevicePageVo>> page(@RequestBody @Valid DevicePageQuery query) {
+        return BaseResult.success(deviceService.pageByQuery(query));
     }
 }
 ```

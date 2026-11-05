@@ -143,6 +143,10 @@
 - Purpose: Standardized API response format
 - Examples: `iot-common/iot-core/src/main/java/com/github/dingdaoyi/core/base/`
 - Pattern: Result wrapper pattern with success/fail factory methods
+- `BaseResult` is the single response envelope (code / msg / data); `success` is derived
+  from the response code rather than stored separately
+- `PageResult` is a pure pagination payload (records / total / current / size) with no
+  envelope fields; pagination endpoints return `BaseResult<PageResult<T>>`
 
 **useTable/useForm Composables:**
 - Purpose: Reusable table and form logic for CRUD pages
@@ -192,10 +196,12 @@
 {
   "code": 400,
   "msg": "Error message",
-  "data": null,
   "success": false
 }
 ```
+
+> `data` is omitted entirely when null (`BaseResult` carries `@JsonInclude(NON_NULL)`).
+> `success` is derived from the response code via `isSuccess()`, not a stored field.
 
 ## Cross-Cutting Concerns
 

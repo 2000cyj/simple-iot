@@ -86,8 +86,8 @@ resources/
 iot-common/iot-core/src/main/java/com/github/dingdaoyi/core/
 ├── base/                          # Base classes
 │   ├── BaseEntity.java            # Base entity with timestamps
-│   ├── BaseResult.java            # Unified API response
-│   └── PageResult.java            # Paginated response wrapper
+│   ├── BaseResult.java            # Unified API response envelope
+│   └── PageResult.java            # Pure pagination payload (records/total/current/size)
 ├── driver/                        # Driver interfaces
 │   └── DeviceTransport.java       # Transport driver interface
 ├── enums/                         # Core enumerations
