@@ -12,7 +12,16 @@ import java.util.Optional;
  */
 public interface ImPushConfigService extends IService<ImPushConfig> {
 
+    /**
+     * 查询指定平台已启用的推送配置
+     * @param platform 推送平台
+     * @return 推送配置
+     */
     Optional<ImPushConfig> getEnabledByPlatform(NotifyType platform);
 
+    /**
+     * 查询全部已启用的推送配置
+     * @return 推送配置列表
+     */
     List<ImPushConfig> listEnabled();
 }

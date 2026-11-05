@@ -20,8 +20,18 @@ public interface MessageReceiveService extends IService<MessageReceive>{
      */
     PageResult<MessageReceive> pageByQuery(MessageRecivePageQuery pageQuery);
 
+    /**
+     * 删除消息接收配置
+     * @param id 配置id
+     * @return 是否删除成功
+     */
     Boolean deleteById(Integer id);
 
+    /**
+     * 按id查询名称
+     * @param id 配置id
+     * @return 名称
+     */
     String getNameById(Integer id);
 
 

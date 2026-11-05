@@ -25,10 +25,25 @@ public interface DeviceService extends IService<Device>{
      */
     Optional<DeviceVo> details(Integer id);
 
+    /**
+     * 按设备编号查询
+     * @param deviceKey 设备编号
+     * @return 设备信息
+     */
     Optional<DeviceDTO> getByDeviceKey(String deviceKey);
 
+    /**
+     * 分页查询设备
+     * @param query 分页查询条件
+     * @return 设备分页结果
+     */
     PageResult<DevicePageVo> pageByQuery(@Valid DevicePageQuery query);
 
+    /**
+     * 更新设备在线状态
+     * @param deviceKey 设备编号
+     * @param online 是否在线
+     */
     void updateOlinStatus(String deviceKey, boolean online);
 
     /**
@@ -47,5 +62,10 @@ public interface DeviceService extends IService<Device>{
      */
     List<Device> list(Integer productTypeId, Integer productId, String deviceKey);
 
+    /**
+     * 按第三方设备编号查询
+     * @param thirdDeviceId 第三方设备编号
+     * @return 设备信息
+     */
     Optional<DeviceDTO> getByThirdDeviceId(String thirdDeviceId);
 }

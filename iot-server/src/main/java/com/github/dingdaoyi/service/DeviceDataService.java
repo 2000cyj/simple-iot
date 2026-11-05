@@ -16,11 +16,31 @@ import java.util.List;
  */
 public interface DeviceDataService {
 
-     List<KeyValue<String, Object>> getLatestData(String deviceKey);
+    /**
+     * 查询设备最新属性值
+     * @param deviceKey 设备编号
+     * @return 属性标识符与属性值的列表
+     */
+    List<KeyValue<String, Object>> getLatestData(String deviceKey);
 
-     List<KeyValue<String, Object>> metric(DeviceDataQuery query);
+    /**
+     * 按条件查询设备属性指标
+     * @param query 查询条件
+     * @return 属性标识符与属性值的列表
+     */
+    List<KeyValue<String, Object>> metric(DeviceDataQuery query);
 
-     PageResult<DeviceEventDataVo> eventLogs(DeviceDataQuery query);
+    /**
+     * 分页查询设备事件日志
+     * @param query 查询条件
+     * @return 事件日志分页结果
+     */
+    PageResult<DeviceEventDataVo> eventLogs(DeviceDataQuery query);
 
-     List<KeyValue<String, Object>> aggregate(TelemetryAggQuery query);
+    /**
+     * 时序数据聚合统计
+     * @param query 聚合条件
+     * @return 聚合结果列表
+     */
+    List<KeyValue<String, Object>> aggregate(TelemetryAggQuery query);
 }

@@ -24,6 +24,11 @@ public interface ModelServiceService extends IService<ModelService>{
      */
     List<ModelServiceVO> listByProductType(Integer productTypeId, Integer serviceType, String search);
 
+    /**
+     * 保存物模型服务
+     * @param modelService 服务新增参数
+     * @return 是否保存成功
+     */
     Boolean save(ServiceAddQuery modelService);
 
     /**
@@ -35,8 +40,18 @@ public interface ModelServiceService extends IService<ModelService>{
     List<ModelServiceVO> listAllByProduct(Integer productId, Integer productTypeId);
 
 
+    /**
+     * 更新物模型服务
+     * @param modelService 服务更新参数
+     * @return 是否更新成功
+     */
     Boolean update(ServiceUpdateQuery modelService);
 
+    /**
+     * 判断产品下是否存在物模型服务
+     * @param productId 产品id
+     * @return 是否存在
+     */
     boolean existsByProduct(Integer productId);
 
     /**

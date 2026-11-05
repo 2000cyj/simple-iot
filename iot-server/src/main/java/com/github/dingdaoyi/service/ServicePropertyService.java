@@ -18,5 +18,9 @@ public interface ServicePropertyService extends IService<ServiceProperty>{
      */
     List<Integer> listByServiceId(Integer serviceId,int paramType);
 
+    /**
+     * 按服务id删除服务属性
+     * @param serviceId 服务id
+     */
     void removeByServiceId(Integer serviceId);
 }

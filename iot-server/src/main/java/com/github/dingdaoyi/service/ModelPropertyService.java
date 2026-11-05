@@ -34,6 +34,11 @@ public interface ModelPropertyService extends IService<ModelProperty> {
      */
     List<ModelProperty> listByParentId(Integer parentId);
 
+    /**
+     * 保存标准物模型属性
+     * @param property 属性新增参数
+     * @return 是否保存成功
+     */
     Boolean saveStandardProperty(StandardPropertyAddQuery property);
 
     /**
@@ -53,10 +58,27 @@ public interface ModelPropertyService extends IService<ModelProperty> {
     boolean exists(String identifier,
                    Integer productTypeId);
 
+    /**
+     * 存在判断
+     * @param identifier 属性标识符
+     * @param productTypeId 产品类型id
+     * @param productId 产品id
+     * @return 是否存在
+     */
     boolean exists(String identifier, Integer productTypeId,  Integer productId);
 
+    /**
+     * 保存产品自定义物模型属性
+     * @param property 属性新增参数
+     * @return 是否保存成功
+     */
     Boolean saveProductProperty(ProductPropertyAddQuery property);
 
+    /**
+     * 更新物模型属性
+     * @param property 属性更新参数
+     * @return 是否更新成功
+     */
     Boolean update(ModelPropertyUpdateQuery property);
 
     /**
@@ -67,5 +89,10 @@ public interface ModelPropertyService extends IService<ModelProperty> {
      */
     List<ModelProperty> listByProduct(Integer productId, Integer productTypeId);
 
+    /**
+     * 判断产品下是否存在物模型属性
+     * @param productId 产品id
+     * @return 是否存在
+     */
     boolean existsByProduct(Integer productId);
 }
