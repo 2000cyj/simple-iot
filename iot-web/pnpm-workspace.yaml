@@ -13,3 +13,22 @@ allowBuilds:
   unrs-resolver: true
   # Vue 2/3 兼容层，postinstall 会改写内部入口指向 Vue 3 实现
   vue-demi: true
+
+# 传递依赖安全补丁强制升级（audit 中的生产链漏洞来源）
+overrides:
+  # element-plus 依赖链上的 lodash 系，高危原型污染
+  lodash: ^4.18.1
+  lodash-es: ^4.18.1
+  # postcss 依赖链上的 nanoid，可预测 id 生成
+  nanoid: '>=3.3.18 <4.0.0'
+  # @vue/compiler-core 依赖链上的 source-map-js
+  source-map-js: ^1.2.2
+  # dev 链（eslint / svgo / vitepress 工具链），均为同 major 的补丁或次版本
+  picomatch: ^2.3.2
+  js-yaml: ^4.2.0
+  svgo: ^2.8.2
+  immutable: ^5.1.5
+  # 注意：minimatch / brace-expansion 不能用全局 override。
+  # eslint-plugin-import-x 依赖 minimatch v9 的具名导出、micromatch 依赖
+  # brace-expansion v2 的 API，全局降级会导致 eslint 配置加载直接崩溃。
+  # 这两个包仅存在于 dev 链且漏洞为构建期 DoS，暂不处理。
