@@ -11,7 +11,10 @@ const service = axios.create({
 // 拦截请求
 service.interceptors.request.use(
   (config) => {
-    if (config.headers.noToken !== 1) {
+    // 免登录标记放在 config 自定义字段上，不能用 header：
+    // AxiosHeaders 会把 header 值归一化成字符串，数字 1 会变成 "1"，
+    // 导致 `!== 1` 恒为真、免 token 请求也会走注入分支，且该标记会作为真实 header 发给后端
+    if (!config.__noToken) {
       const store = useAccountStore()
       if (!store.authorization) {
         // TODO 没有登录

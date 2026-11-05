@@ -3,9 +3,8 @@ import request from '@/utils/request'
 // 登录接口
 export function Index(data) {
   return request({
-    headers: {
-      noToken: 1,
-    },
+    // 免 token 标记，见 utils/request.js 注释（不能用 header 承载）
+    __noToken: true,
     url: '/user/login',
     method: 'post',
     data,
