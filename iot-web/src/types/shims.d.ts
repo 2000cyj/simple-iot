@@ -80,9 +80,6 @@ declare module 'virtual:svg-icons-register' {
   export default register
 }
 
-declare module '*.vue' {
-  import type { DefineComponent } from 'vue'
-
-  const component: DefineComponent<Record<string, unknown>, Record<string, unknown>, unknown>
-  export default component
-}
+// 注意：这里刻意不声明 `declare module '*.vue'`。
+// Vue 3 + vue-tsc 会原生解析 .vue 的真实类型，
+// 通配声明反而会遮蔽 SFC 的 props/emits 类型（Vue 2 时代的遗留写法）。
