@@ -45,7 +45,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = MethodArgumentTypeMismatchException.class)
     public BaseResult<Object> methodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
         final MethodParameter parameter = e.getParameter();
-        return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(), "参数不存在:" + parameter.getParameterName());
+        // 原消息"参数不存在:{name}"有误导：参数存在，只是取值无法转换成目标类型
+        // （典型场景：路径变量收到字面量 "undefined" / "null"）。
+        // 带上实际收到的值，便于直接定位是哪一层的 id 丢失了。
+        log.warn("参数类型不匹配: 参数={}, 值={}, 期望类型={}",
+                parameter.getParameterName(), e.getValue(), parameter.getParameterType());
+        return BaseResult.fail(ErrorCode.BAD_REQUEST.getCode(),
+                "参数格式错误:" + parameter.getParameterName() + "=" + e.getValue());
     }
 
     @ResponseBody

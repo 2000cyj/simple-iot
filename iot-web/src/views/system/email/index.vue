@@ -314,7 +314,7 @@ const columns = computed<TableColumn[]>(() => [
             v-model="row.status"
             :active-value="1"
             :inactive-value="2"
-            @change="handleStatusChange(row)"
+            @click="handleStatusChange(row)"
           />
         </template>
         <template #cz="{ row }">
